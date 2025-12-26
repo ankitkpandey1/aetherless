@@ -5,42 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2025-12-26
 
-## [0.1.0] - 2024-12-26
+### Initial Release
 
-### Added
-- Initial release of Aetherless serverless orchestrator
-- **Core Orchestrator**
-  - Function registry with thread-safe DashMap
-  - State machine (Uninitialized → WarmSnapshot → Running → Suspended)
-  - YAML configuration parser with strict validation
-  - Custom enum error types (HardValidationError, CriuError, etc.)
-  - Newtype pattern for validated inputs (Port, MemoryLimit, FunctionId)
-- **Shared Memory IPC**
-  - POSIX shared memory regions (mmap/shm_open)
-  - Lock-free SPSC ring buffer with atomics
-  - CRC32 checksum payload validation
-- **CRIU Lifecycle Manager**
-  - Process snapshot/restore via CRIU
-  - 15ms restore latency enforcement
-  - Unix socket READY handshake protocol
-- **eBPF Data Plane**
-  - XDP manager for port-to-PID mapping
-  - Userspace BPF map representation
-- **CLI & TUI**
-  - `aether up` - Start orchestrator
-  - `aether down` - Stop orchestrator
-  - `aether deploy` - Hot-load functions
-  - `aether list` - List registered functions
-  - `aether stats` - Show statistics
-  - `aether validate` - Validate configuration
-  - TUI dashboard with ratatui
+Aetherless v1.0.0 - High-performance serverless function orchestrator with eBPF-accelerated networking and sub-15ms cold starts.
 
-### Security
-- No fallback architecture (critical errors only)
-- Fail-fast on invalid configuration
-- Checksummed IPC payloads
+### Features
 
-[Unreleased]: https://github.com/ankitkpandey1/aetherless/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/ankitkpandey1/aetherless/releases/tag/v0.1.0
+- **CRIU Warm Pools**: Process checkpoint/restore for sub-15ms cold starts
+- **eBPF/XDP Data Plane**: Kernel-bypass packet routing with microsecond latency
+- **Zero-Copy Shared Memory**: Lock-free SPSC ring buffer with CRC32 validation
+- **Fail-Fast Architecture**: No silent degradation, explicit error types
+- **CLI Orchestrator**: Full lifecycle management with TUI dashboard
+- **Language Agnostic**: Works with Python, Node, Rust, Go, or any TCP-capable process
+
+### Components
+
+- `aetherless-core` - Core library (config, registry, state machine, SHM, CRIU)
+- `aetherless-cli` - CLI tool and orchestrator (`aether` binary)
+- `aetherless-ebpf` - XDP program loader and BPF map manager
+
+### CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `aether up` | Start orchestrator |
+| `aether down` | Stop orchestrator |
+| `aether deploy` | Validate configuration |
+| `aether list` | List functions |
+| `aether stats` | Show metrics/TUI |
+| `aether validate` | Validate config file |
+
+### Documentation
+
+- Comprehensive README with quick start guide
+- ARCHITECTURE.md with design rationale
+- CONTRIBUTING.md with coding guidelines
+- Example handlers (Python)
+
+### Tests
+
+- 49 tests (36 unit + 8 integration + 5 eBPF)
+- Full CI pipeline (test, clippy, fmt, build, docs)
+
+### Requirements
+
+- Rust 1.70+
+- Linux (for eBPF/XDP features)
+- Optional: CRIU for warm pools
+
+### License
+
+Apache-2.0
+
+---
+
+[1.0.0]: https://github.com/ankitkpandey1/aetherless/releases/tag/v1.0.0
