@@ -194,6 +194,9 @@ pub enum EbpfError {
     #[error("Failed to attach XDP program to interface {interface}: {reason}")]
     AttachFailed { interface: String, reason: String },
 
+    #[error("BPF map '{name}' not found")]
+    MapNotFound { name: String },
+
     #[error("BPF map is full - cannot add port {port}")]
     MapFull { port: Port },
 
@@ -202,6 +205,9 @@ pub enum EbpfError {
 
     #[error("BPF map update failed for port {port}: {reason}")]
     MapUpdateFailed { port: Port, reason: String },
+
+    #[error("BPF map operation '{operation}' failed: {reason}")]
+    MapOperationFailed { operation: String, reason: String },
 
     #[error("Packet drop: malformed packet")]
     MalformedPacket,

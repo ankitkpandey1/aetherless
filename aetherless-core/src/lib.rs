@@ -14,7 +14,7 @@ pub mod types;
 
 // Re-export commonly used types
 pub use config::{Config, ConfigLoader, FunctionConfig, OrchestratorConfig};
-pub use error::{AetherError, AetherResult, HardValidationError};
+pub use error::{AetherError, AetherResult, EbpfError, HardValidationError};
 pub use registry::FunctionRegistry;
 pub use state::{FunctionState, FunctionStateMachine};
 pub use types::{FunctionId, HandlerPath, MemoryLimit, Port, ProcessId};

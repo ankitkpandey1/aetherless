@@ -8,7 +8,7 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-44%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-49%20passed-brightgreen.svg)]()
 
 </div>
 
@@ -244,6 +244,64 @@ Every handler must:
 2. **Connect** to the Unix socket
 3. **Send** `READY` message (exactly 5 bytes)
 4. **Start** serving on `AETHER_TRIGGER_PORT`
+
+---
+
+## ⚡ eBPF/XDP (Advanced)
+
+Aetherless includes an eBPF data plane for kernel-bypass networking. This is optional but provides the lowest latency.
+
+### How It Works
+
+```
+Network Packet → XDP Program → Port Lookup → Function Handler
+                     ↓
+              (Kernel-level routing, ~5-10μs)
+```
+
+### Usage
+
+```bash
+# Build the eBPF loader
+cargo build --release -p aetherless-ebpf
+
+# Run without XDP (userspace only)
+./target/release/aetherless-ebpf eth0
+
+# Run with XDP program (requires root)
+sudo ./target/release/aetherless-ebpf eth0 /path/to/xdp_redirect.o
+```
+
+### Example: Register a Port
+
+```rust
+use aetherless_ebpf::XdpManager;
+use aetherless_core::{Port, ProcessId};
+
+// Create manager
+let mut manager = XdpManager::new("eth0");
+
+// Register port 8080 → PID 12345
+manager.register_port(
+    Port::new(8080).unwrap(),
+    ProcessId::new(12345).unwrap(),
+    None  // Use localhost
+).await?;
+
+// Look up
+let pid = manager.lookup_port(Port::new(8080).unwrap()).await;
+assert_eq!(pid, Some(12345));
+```
+
+### Performance
+
+| Mode | Latency | Use Case |
+|------|---------|----------|
+| Userspace only | ~50-100μs | Development, testing |
+| XDP mode | ~5-10μs | Production, low-latency |
+
+> **Note:** XDP requires root privileges and Linux kernel 4.8+.
+> See [aetherless-ebpf/README.md](aetherless-ebpf/README.md) for detailed documentation.
 
 ---
 
