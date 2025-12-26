@@ -1,0 +1,44 @@
+# Rust build artifacts
+/target/
+**/target/
+
+# Cargo.lock is included for binaries, but listed here for reference
+# Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# CRIU dumps (should be in /dev/shm but just in case)
+criu_dump_*/
+
+# Shared memory artifacts
+*.shm
+
+# Test artifacts
+*.profraw
+lcov.info
+coverage/
+
+# Editor backups
+*.bak
+*.orig
+
+# Build caches
+.cargo/
+!/.cargo/config.toml

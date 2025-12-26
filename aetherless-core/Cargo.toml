@@ -1,0 +1,25 @@
+[package]
+name = "aetherless-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core orchestrator library for Aetherless serverless platform"
+
+[lib]
+name = "aetherless_core"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { workspace = true }
+dashmap = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+libc = { workspace = true }
+nix = { workspace = true }
+tracing = { workspace = true }
+crc32fast = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.9"

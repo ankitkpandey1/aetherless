@@ -1,0 +1,27 @@
+[package]
+name = "aetherless-ebpf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "eBPF data plane for Aetherless serverless platform"
+
+[[bin]]
+name = "aetherless-ebpf"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+libc = { workspace = true }
+
+# eBPF userspace
+aya = "0.12"
+aya-log = "0.2"
+
+aetherless-core = { path = "../aetherless-core" }
+
+[build-dependencies]
+# eBPF build integration will be added when we implement the eBPF programs

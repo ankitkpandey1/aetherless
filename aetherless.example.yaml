@@ -1,0 +1,47 @@
+# Aetherless Configuration Example
+# This file demonstrates the complete configuration schema for the orchestrator.
+
+orchestrator:
+  # Size of shared memory buffer for IPC (in bytes)
+  # Default: 4MB, Range: 64KB to 1GB
+  shm_buffer_size: 4194304  # 4 MB
+  
+  # Number of warm function instances to maintain
+  # Default: 10, Range: 1 to 1000
+  warm_pool_size: 10
+  
+  # Maximum time allowed for CRIU restore (in milliseconds)
+  # STRICT: Exceeding this limit triggers LatencyViolationError
+  # Default: 15ms, Range: 1 to 100ms
+  restore_timeout_ms: 15
+  
+  # Directory for CRIU snapshots (use /dev/shm for memory-backed storage)
+  snapshot_dir: /dev/shm/aetherless
+
+functions:
+  # Example: Hello World HTTP handler
+  - id: hello-world
+    memory_limit_mb: 128
+    trigger_port: 8080
+    handler_path: /usr/local/bin/hello-handler
+    timeout_ms: 30000
+    environment:
+      DEBUG: "true"
+      LOG_LEVEL: "info"
+
+  # Example: Image processing function
+  - id: image-processor
+    memory_limit_mb: 512
+    trigger_port: 8081
+    handler_path: /usr/local/bin/image-processor
+    timeout_ms: 60000
+    environment:
+      MAX_IMAGE_SIZE: "10485760"  # 10MB
+      OUTPUT_FORMAT: "webp"
+
+  # Example: Data aggregation function
+  - id: data-aggregator
+    memory_limit_mb: 256
+    trigger_port: 8082
+    handler_path: /usr/local/bin/aggregator
+    timeout_ms: 120000
