@@ -22,15 +22,6 @@ Aetherless is a **zero-compromise serverless function orchestrator** built in Ru
 - **Zero-copy shared memory** for lock-free IPC
 - **Strict latency enforcement** (15ms restore limit)
 
-### Design Philosophy
-
-| Principle | Implementation |
-|-----------|----------------|
-| **No Fallbacks** | If eBPF or SHM fails, return error—never degrade silently |
-| **Fail-Fast** | Invalid config terminates process immediately |
-| **Explicit Errors** | Custom enum types, no `Box<dyn Error>` or generics |
-| **Type Safety** | Newtype pattern validates inputs at construction |
-
 ---
 
 ## 📦 Installation
@@ -201,52 +192,6 @@ Function handlers must:
 3. Send `READY` message when initialized
 4. Process events from shared memory
 
-```rust
-// Example handler (Rust)
-use std::os::unix::net::UnixStream;
-use std::io::Write;
-
-fn main() {
-    let socket_path = std::env::var("AETHER_SOCKET").unwrap();
-    let mut stream = UnixStream::connect(&socket_path).unwrap();
-    
-    // Signal ready
-    stream.write_all(b"READY").unwrap();
-    
-    // Process events...
-}
-```
-
-### Shared Memory IPC
-
-The ring buffer uses lock-free atomics for SPSC communication:
-
-```
-┌──────────────────────────────────────────────────┐
-│ Header (24 bytes)                                │
-│   head: AtomicU64 (write position)              │
-│   tail: AtomicU64 (read position)               │
-│   capacity: AtomicU64                           │
-├──────────────────────────────────────────────────┤
-│ Entry 1: [length:4][checksum:4][payload...]     │
-│ Entry 2: [length:4][checksum:4][payload...]     │
-│ ...                                             │
-└──────────────────────────────────────────────────┘
-```
-
-### CRIU Warm Pool
-
-Functions go through a state machine:
-
-```
-Uninitialized → WarmSnapshot → Running → Suspended
-      ↑              ↓           ↓           ↓
-      └──────────────┴───────────┴───────────┘
-```
-
-- **WarmSnapshot**: Process dumped to `/dev/shm`, ready for instant restore
-- **Restore constraint**: Must complete in ≤15ms or process is killed
-
 ---
 
 ## 🏗️ Architecture
@@ -280,78 +225,243 @@ Uninitialized → WarmSnapshot → Running → Suspended
 | `aetherless-ebpf` | XDP program loader and BPF map manager |
 | `aetherless-cli` | CLI tool and TUI dashboard |
 
-### Error Handling
+---
 
-All errors are explicit enum variants:
+## 📚 Examples
+
+### Example 1: Python HTTP Handler
+
+**Configuration (`python-http.yaml`):**
+
+```yaml
+functions:
+  - id: python-http
+    memory_limit_mb: 256
+    trigger_port: 8080
+    handler_path: /opt/handlers/python-http.py
+    timeout_ms: 30000
+    environment:
+      PYTHONUNBUFFERED: "1"
+```
+
+**Handler (`python-http.py`):**
+
+```python
+#!/usr/bin/env python3
+"""
+Aetherless Python HTTP Handler Example
+"""
+import os
+import socket
+import json
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        response = {
+            'status': 'ok',
+            'function': os.environ.get('AETHER_FUNCTION_ID', 'unknown'),
+            'path': self.path
+        }
+        self.wfile.write(json.dumps(response).encode())
+
+def main():
+    # Connect to Aetherless orchestrator
+    socket_path = os.environ['AETHER_SOCKET']
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(socket_path)
+    
+    # Send READY signal
+    sock.send(b'READY')
+    print(f"Connected to orchestrator, starting HTTP server...")
+    
+    # Start HTTP server
+    server = HTTPServer(('0.0.0.0', 8080), Handler)
+    server.serve_forever()
+
+if __name__ == '__main__':
+    main()
+```
+
+---
+
+### Example 2: Python Image Processor
+
+**Configuration (`image-processor.yaml`):**
+
+```yaml
+functions:
+  - id: image-resize
+    memory_limit_mb: 1024
+    trigger_port: 8081
+    handler_path: /opt/handlers/image-processor.py
+    timeout_ms: 120000
+    environment:
+      MAX_IMAGE_SIZE: "52428800"
+      OUTPUT_FORMAT: "webp"
+      QUALITY: "85"
+```
+
+**Handler (`image-processor.py`):**
+
+```python
+#!/usr/bin/env python3
+"""
+Aetherless Image Processor Handler
+"""
+import os
+import socket
+import io
+from PIL import Image
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class ImageHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        image_data = self.rfile.read(content_length)
+        
+        # Process image
+        img = Image.open(io.BytesIO(image_data))
+        img.thumbnail((800, 800))
+        
+        # Convert to output format
+        output = io.BytesIO()
+        output_format = os.environ.get('OUTPUT_FORMAT', 'webp')
+        quality = int(os.environ.get('QUALITY', '85'))
+        img.save(output, format=output_format.upper(), quality=quality)
+        
+        # Send response
+        self.send_response(200)
+        self.send_header('Content-Type', f'image/{output_format}')
+        self.end_headers()
+        self.wfile.write(output.getvalue())
+
+def main():
+    # Connect to Aetherless
+    socket_path = os.environ['AETHER_SOCKET']
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(socket_path)
+    sock.send(b'READY')
+    
+    print("Image processor ready")
+    server = HTTPServer(('0.0.0.0', 8081), ImageHandler)
+    server.serve_forever()
+
+if __name__ == '__main__':
+    main()
+```
+
+---
+
+### Example 3: Rust Handler
+
+**Configuration (`rust-handler.yaml`):**
+
+```yaml
+functions:
+  - id: rust-api
+    memory_limit_mb: 64
+    trigger_port: 3000
+    handler_path: /opt/handlers/rust-handler
+    timeout_ms: 30000
+    environment:
+      RUST_LOG: "info"
+```
+
+**Handler (`main.rs`):**
 
 ```rust
-pub enum AetherError {
-    HardValidation(HardValidationError),  // Fail-fast
-    InvalidStateTransition(StateTransitionError),
-    SharedMemory(SharedMemoryError),      // No fallback
-    Criu(CriuError),                      // Latency enforced
-    Ebpf(EbpfError),                      // No userspace fallback
+use std::os::unix::net::UnixStream;
+use std::io::{Read, Write, BufReader, BufRead};
+use std::net::TcpListener;
+
+fn main() {
+    // Connect to Aetherless orchestrator
+    let socket_path = std::env::var("AETHER_SOCKET")
+        .expect("AETHER_SOCKET not set");
+    
+    let mut stream = UnixStream::connect(&socket_path)
+        .expect("Failed to connect to orchestrator");
+    
+    // Send READY signal
+    stream.write_all(b"READY").expect("Failed to send READY");
+    println!("Connected to orchestrator");
+    
+    // Start TCP server
+    let listener = TcpListener::bind("0.0.0.0:3000")
+        .expect("Failed to bind");
+    
+    for stream in listener.incoming() {
+        if let Ok(mut stream) = stream {
+            let response = "HTTP/1.1 200 OK\r\n\
+                Content-Type: application/json\r\n\r\n\
+                {\"status\":\"ok\"}";
+            stream.write_all(response.as_bytes()).ok();
+        }
+    }
 }
 ```
 
 ---
 
-## 📚 Examples
+### Example 4: Multi-Function Setup
 
-### Example 1: HTTP Handler
-
-```yaml
-# http-handler.yaml
-functions:
-  - id: http-api
-    memory_limit_mb: 256
-    trigger_port: 3000
-    handler_path: /opt/handlers/http-server
-    timeout_ms: 60000
-    environment:
-      RUST_LOG: "info"
-      DATABASE_URL: "postgres://localhost/mydb"
-```
-
-### Example 2: Image Processor
+**Configuration (`multi-function.yaml`):**
 
 ```yaml
-# image-processor.yaml
-functions:
-  - id: image-resize
-    memory_limit_mb: 1024
-    trigger_port: 8081
-    handler_path: /opt/handlers/image-processor
-    timeout_ms: 120000
-    environment:
-      MAX_IMAGE_SIZE: "52428800"  # 50MB
-      OUTPUT_FORMAT: "webp"
-      QUALITY: "85"
-```
-
-### Example 3: Multi-Function Setup
-
-```yaml
-# multi-function.yaml
 orchestrator:
   warm_pool_size: 20
-  restore_timeout_ms: 10  # Aggressive
+  restore_timeout_ms: 10
 
 functions:
   - id: auth-service
     memory_limit_mb: 128
     trigger_port: 9000
-    handler_path: /opt/handlers/auth
+    handler_path: /opt/handlers/auth.py
+    timeout_ms: 5000
 
   - id: data-processor
     memory_limit_mb: 512
     trigger_port: 9001
-    handler_path: /opt/handlers/processor
+    handler_path: /opt/handlers/processor.py
+    timeout_ms: 60000
 
   - id: notification-sender
     memory_limit_mb: 64
     trigger_port: 9002
-    handler_path: /opt/handlers/notifier
+    handler_path: /opt/handlers/notifier.py
+    timeout_ms: 10000
+```
+
+**Auth Handler (`auth.py`):**
+
+```python
+#!/usr/bin/env python3
+import os, socket, json
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class AuthHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers.get('Content-Length', 0))
+        body = json.loads(self.rfile.read(content_length)) if content_length else {}
+        
+        # Simple auth check
+        token = body.get('token', '')
+        is_valid = len(token) > 10  # Demo validation
+        
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({'authenticated': is_valid}).encode())
+
+if __name__ == '__main__':
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(os.environ['AETHER_SOCKET'])
+    sock.send(b'READY')
+    HTTPServer(('0.0.0.0', 9000), AuthHandler).serve_forever()
 ```
 
 ---
