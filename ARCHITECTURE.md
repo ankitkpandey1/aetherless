@@ -65,18 +65,18 @@ Aetherless is built on four core principles:
 
 **What it means:** When a critical component fails, the system returns an error—it never silently degrades to a slower path.
 
-**Why:** Silent degradation masks problems in production. If eBPF loading fails, we don't fall back to iptables because:
+**Why:** Silent degradation masks problems in production. If eBPF loading fails, Aetherless does not fall back to iptables because:
 - The operator expects eBPF-level performance
 - Fallback hides the real problem until it's too late
 - Mixed modes are harder to debug
 
 ```rust
-// What we DO:
+// Correct approach:
 if ebpf_failed {
     return Err(AetherError::Ebpf(EbpfError::LoadFailed { ... }));
 }
 
-// What we DON'T do:
+// Incorrect approach:
 if ebpf_failed {
     log::warn!("eBPF failed, using slow path");
     use_iptables_fallback();  // Silent degradation
@@ -90,7 +90,7 @@ if ebpf_failed {
 **Why:** Catching errors at startup is far cheaper than catching them in production:
 - A typo in a port number discovered at startup costs 0
 - The same typo discovered during a production incident costs hours
-- We validate exhaustively: ports, memory limits, paths, timeouts, duplicates
+- Exhaustive validation is performed: ports, memory limits, paths, timeouts, duplicates
 
 ### 3. Explicit Error Types
 
@@ -103,12 +103,12 @@ if ebpf_failed {
 
 ### 4. Single-Producer Single-Consumer (SPSC)
 
-**What it means:** Our shared memory IPC uses SPSC design, not MPMC.
+**What it means:** The shared memory IPC uses SPSC design, not MPMC.
 
 **Why:** SPSC is dramatically simpler and faster:
 - No contention between multiple writers
 - Wait-free reads and writes with atomics
-- Matches our model: one orchestrator, one handler per function
+- Matches the model: one orchestrator, one handler per function
 
 ---
 
@@ -154,13 +154,13 @@ Traditional serverless cold starts take 100-500ms because:
 
 ### Alternative Approaches Considered
 
-| Approach | Latency | Why We Rejected It |
+| Approach | Latency | Why Rejected |
 |----------|---------|-------------------|
 | Pre-warmed processes | ~10ms | Memory overhead for idle processes |
 | Container snapshots | ~50-100ms | Docker/containerd overhead |
 | Firecracker microVMs | ~125ms | Still too slow for sub-15ms target |
 | Language-level snapshots | Varies | Language-specific, not universal |
-| **CRIU (our choice)** | **<15ms** | **Universal, kernel-level, fastest** |
+| **CRIU (chosen)** | **<15ms** | **Universal, kernel-level, fastest** |
 
 ### Why CRIU Wins
 
@@ -171,7 +171,7 @@ CRIU (Checkpoint/Restore In Userspace) operates at the OS level:
 3. **Kernel-Level Speed:** Restores via `mmap()`, not `read()` + `copy()`
 4. **Proven at Scale:** Used by Google, Facebook, and container runtimes
 
-### Our CRIU Pipeline
+### The CRIU Pipeline
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -197,7 +197,7 @@ CRIU (Checkpoint/Restore In Userspace) operates at the OS level:
 
 ### The 15ms Latency Enforcement
 
-We **strictly enforce** a 15ms restore timeout:
+A 15ms restore timeout is **strictly enforced**:
 
 ```rust
 const RESTORE_TIMEOUT_MS: u64 = 15;
@@ -212,7 +212,7 @@ if restore_result.duration > Duration::from_millis(RESTORE_TIMEOUT_MS) {
 }
 ```
 
-**Why so strict?** Because if restore exceeds 15ms, we've lost our competitive advantage. The operator needs to know immediately—via error, not log line—that their cold starts are too slow.
+**Why so strict?** Because if restore exceeds 15ms, the competitive advantage is lost. The operator needs to know immediately—via error, not log line—that cold starts are too slow.
 
 ---
 
@@ -236,13 +236,13 @@ Each step adds latency:
 
 ### Alternative Approaches Considered
 
-| Approach | Latency | Why We Rejected It |
+| Approach | Latency | Why Rejected |
 |----------|---------|-------------------|
 | Standard sockets | ~100-500μs | Too slow |
 | SO_REUSEPORT | ~50-100μs | Still userspace |
 | DPDK | ~5-10μs | Requires dedicated NIC, complex |
 | Kernel bypass (custom) | ~5-10μs | Requires kernel module |
-| **XDP (our choice)** | **~5-10μs** | **In-kernel, safe, maintainable** |
+| **XDP (chosen)** | **~5-10μs** | **In-kernel, safe, maintainable** |
 
 ### Why XDP Wins
 
@@ -254,7 +254,7 @@ XDP (eXpress Data Path) is eBPF running at the earliest point in the network sta
 4. **Live Update:** Can update routing without restart
 5. **Observability:** Full access to BPF tracing
 
-### Our eBPF Map Design
+### The eBPF Map Design
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
@@ -306,7 +306,7 @@ int xdp_redirect(struct xdp_md *ctx) {
 }
 ```
 
-**Why not per-CPU maps?** Because our routing table is small (~1000 entries max) and rarely updated. The simplicity of a shared hash map outweighs the marginal performance gain of per-CPU arrays.
+**Why not per-CPU maps?** Because the routing table is small (~1000 entries max) and rarely updated. The simplicity of a shared hash map outweighs the marginal performance gain of per-CPU arrays.
 
 ---
 
@@ -331,7 +331,7 @@ Traditional IPC methods for function invocation:
 3. **Cache Friendly:** Both processes share CPU cache lines
 4. **Deterministic:** No network jitter or kernel scheduling delays
 
-### Our Ring Buffer Design
+### The Ring Buffer Design
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -356,16 +356,16 @@ Traditional IPC methods for function invocation:
 
 ### Why SPSC Over MPMC
 
-We chose Single-Producer Single-Consumer over Multi-Producer Multi-Consumer:
+Single-Producer Single-Consumer is chosen over Multi-Producer Multi-Consumer:
 
 | SPSC | MPMC |
 |------|------|
 | 2 atomics (head, tail) | 4+ atomics + CAS loops |
 | Wait-free reads/writes | May spin under contention |
 | ~1-2μs latency | ~5-10μs latency |
-| Perfect for our model | Overkill for our model |
+| Perfect for the model | Overkill for the model |
 
-**Our model:** One orchestrator (producer) → One handler (consumer) per function.
+**The model:** One orchestrator (producer) → One handler (consumer) per function.
 
 ### CRC32 Validation
 
@@ -400,17 +400,17 @@ Cost: ~1μs per 64KB payload. Worth it.
 ### The Problem: Generic Errors Lose Context
 
 ```rust
-// What we see in logs with Box<dyn Error>:
+// Logs with Box<dyn Error>:
 Error: "something went wrong"
 
-// What we see with our explicit types:
+// Logs with explicit types:
 Error: AetherError::Ebpf(EbpfError::AttachFailed {
     interface: "eth0",
     reason: "XDP program not found in BPF object"
 })
 ```
 
-### Our Error Hierarchy
+### The Error Hierarchy
 
 ```
 AetherError (root)

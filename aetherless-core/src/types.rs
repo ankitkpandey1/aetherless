@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2025 Ankit Pandey
+// Copyright 2025 Ankit Kumar Pandey
 
 //! Newtype wrappers for validated inputs.
 //!

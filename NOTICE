@@ -1,7 +1,7 @@
 Aetherless
-Copyright 2025 Ankit Pandey
+Copyright 2025 Ankit Kumar Pandey
 
-Architected and authored by Ankit Pandey. All rights reserved.
+Architected and authored by Ankit Kumar Pandey. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,4 +35,4 @@ This project includes the following components:
    - BPF map port-to-PID routing
    - Kernel-bypass networking
 
-All components are solely authored by Ankit Pandey.
+All components are solely authored by Ankit Kumar Pandey.

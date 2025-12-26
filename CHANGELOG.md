@@ -42,5 +42,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fail-fast on invalid configuration
 - Checksummed IPC payloads
 
-[Unreleased]: https://github.com/yourusername/aetherless/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/yourusername/aetherless/releases/tag/v0.1.0
+[Unreleased]: https://github.com/ankitkpandey1/aetherless/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/ankitkpandey1/aetherless/releases/tag/v0.1.0

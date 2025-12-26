@@ -1,6 +1,6 @@
 # Contributing to Aetherless
 
-Thank you for your interest in contributing to Aetherless! This document provides guidelines and information for contributors.
+This document provides guidelines and information for contributors.
 
 ## Code of Conduct
 
@@ -18,7 +18,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/aetherless.git
+git clone https://github.com/ankitkpandey1/aetherless.git
 cd aetherless
 
 # Build all crates
@@ -56,7 +56,7 @@ refactor: simplify state machine transitions
 
 1. **Fork** the repository
 2. **Create** a feature branch from `main`
-3. **Write** code following our coding guidelines
+3. **Write** code following the coding guidelines
 4. **Add** tests for new functionality
 5. **Run** the full test suite: `cargo test --workspace`
 6. **Run** clippy: `cargo clippy --workspace`
@@ -182,11 +182,11 @@ When reporting issues, please include:
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, contributors agree that contributions will be licensed under the Apache License 2.0.
 
 ## Questions?
 
 - Open a GitHub issue for questions
 - Check existing issues before creating new ones
 
-Thank you for contributing! 🚀
+Contributions are appreciated!
