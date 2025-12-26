@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! End-to-end integration tests for Aetherless.
 //!
 //! These tests verify the complete flow from configuration to running handlers.

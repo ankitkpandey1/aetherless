@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! SharedMemoryRegion - POSIX shared memory wrapper.
 //!
 //! Provides safe abstraction over mmap and shm_open for zero-copy IPC.

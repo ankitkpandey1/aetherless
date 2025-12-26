@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Payload validation using checksums.
 //!
 //! Validates integrity of buffer data at every read.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! `aether list` command - List functions from configuration.
 //!
 //! Lists functions defined in the configuration file.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Lock-free circular ring buffer for IPC.
 //!
 //! Uses atomic head/tail pointers for wait-free single-producer single-consumer

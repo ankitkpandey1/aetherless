@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! `aether stats` command - Show orchestrator statistics.
 //!
 //! Displays runtime metrics when connected to the orchestrator.

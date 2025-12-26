@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! `aether down` command - Stop the orchestrator.
 //!
 //! Stops a running orchestrator by sending SIGTERM to the process.

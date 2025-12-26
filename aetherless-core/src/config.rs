@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! YAML configuration parser with strict schema validation.
 //!
 //! Validates function configurations at boot-up time.

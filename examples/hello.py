@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2025 Ankit Pandey
+
 #!/usr/bin/env python3
 """
 Aetherless Function Handler - Hello World API

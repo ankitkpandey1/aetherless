@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Function state machine with typed state transitions.
 //!
 //! Implements the function lifecycle: Uninitialized → WarmSnapshot → Running → Suspended.

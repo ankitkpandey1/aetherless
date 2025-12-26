@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Thread-safe function registry using DashMap.
 //!
 //! Provides concurrent access to registered functions and their state machines.

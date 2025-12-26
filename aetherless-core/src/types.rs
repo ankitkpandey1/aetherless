@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Newtype wrappers for validated inputs.
 //!
 //! Following the "Newtype" pattern in Rust to ensure valid state by construction.

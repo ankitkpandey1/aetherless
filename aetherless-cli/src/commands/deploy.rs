@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! `aether deploy` command - Deploy function configuration.
 //!
 //! Validates configuration and provides deployment instructions.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! `aether validate` command - Validate configuration file.
 
 use aetherless_core::ConfigLoader;

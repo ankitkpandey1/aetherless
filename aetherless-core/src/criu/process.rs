@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Function process management.
 //!
 //! Spawns function processes and waits for READY signal on Unix socket.

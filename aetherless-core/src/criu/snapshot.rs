@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! CRIU snapshot management.
 //!
 //! Manages process checkpointing and restoration using CRIU.

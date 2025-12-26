@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! `aether up` command - Start the orchestrator.
 //!
 //! Spawns handler processes, creates Unix sockets, and waits for READY signals.

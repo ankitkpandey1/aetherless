@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Custom error types for Aetherless.
 //!
 //! This module defines explicit enum error types as per coding guidelines.

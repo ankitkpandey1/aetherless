@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! CRIU lifecycle management module.
 //!
 //! Provides process snapshot/restore using CRIU for fast cold start.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Aetherless CLI
 //!
 //! Command-line interface for the Aetherless serverless platform.

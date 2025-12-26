@@ -7,7 +7,7 @@
 *Zero-fallback • eBPF-accelerated • Sub-millisecond cold starts*
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-49%20passed-brightgreen.svg)]()
 
 </div>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! Aetherless eBPF Data Plane
 //!
 //! XDP-based network redirection for serverless function routing.
@@ -10,7 +13,7 @@ use std::sync::Arc;
 
 use aya::maps::HashMap as BpfHashMap;
 use aya::programs::{Xdp, XdpFlags};
-use aya::Bpf;
+use aya::Ebpf;
 use tokio::sync::RwLock;
 
 use aetherless_core::{AetherError, EbpfError, Port, ProcessId};
@@ -44,7 +47,7 @@ unsafe impl aya::Pod for PortValue {}
 #[derive(Debug)]
 pub struct XdpManager {
     /// The loaded BPF object (None if not loaded).
-    bpf: Option<Bpf>,
+    bpf: Option<Ebpf>,
     /// Port to PID mapping (userspace mirror).
     port_map: Arc<RwLock<HashMap<u16, PortValue>>>,
     /// Interface the XDP program is attached to.
@@ -96,7 +99,7 @@ impl XdpManager {
         let path = program_path.as_ref();
 
         // Load the BPF object file
-        let mut bpf = Bpf::load_file(path).map_err(|e| {
+        let mut bpf = Ebpf::load_file(path).map_err(|e| {
             AetherError::Ebpf(EbpfError::LoadFailed {
                 reason: format!("Failed to load BPF object '{}': {}", program_name, e),
             })

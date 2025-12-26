@@ -18,8 +18,8 @@ tracing-subscriber = { workspace = true }
 libc = { workspace = true }
 
 # eBPF userspace
-aya = "0.12"
-aya-log = "0.2"
+aya = "0.13.1"
+aya-log = "0.2.1"
 
 aetherless-core = { path = "../aetherless-core" }
 

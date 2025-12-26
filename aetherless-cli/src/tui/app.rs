@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2025 Ankit Pandey
+
 //! TUI Dashboard using ratatui.
 //!
 //! Visualizes the warm pool of functions and real-time statistics.
@@ -82,7 +85,7 @@ fn render(frame: &mut Frame, _app: &App) {
             Constraint::Min(10),   // Main content
             Constraint::Length(3), // Footer
         ])
-        .split(frame.size());
+        .split(frame.area());
 
     // Title
     let title = Paragraph::new(" AETHERLESS DASHBOARD ")
