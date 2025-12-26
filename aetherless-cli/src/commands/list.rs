@@ -1,15 +1,41 @@
-//! `aether list` command - List registered functions.
+//! `aether list` command - List functions from configuration.
+//!
+//! Lists functions defined in the configuration file.
 
-pub async fn execute() -> Result<(), Box<dyn std::error::Error>> {
+use aetherless_core::ConfigLoader;
+
+pub async fn execute(config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let config = ConfigLoader::load_file(config_path)?;
+
+    if config.functions.is_empty() {
+        println!("No functions defined in configuration.");
+        return Ok(());
+    }
+
     println!("╔══════════════════════════════════════════════════════════════════════════════╗");
-    println!("║                           REGISTERED FUNCTIONS                               ║");
-    println!("╠═══════════════════╦════════╦════════════╦═══════════════════╦════════════════╣");
-    println!("║ ID                ║ State  ║ Port       ║ Memory            ║ Uptime         ║");
-    println!("╠═══════════════════╬════════╬════════════╬═══════════════════╬════════════════╣");
-    println!("║ (no functions registered)                                                    ║");
-    println!("╚═══════════════════╩════════╩════════════╩═══════════════════╩════════════════╝");
+    println!("║                           CONFIGURED FUNCTIONS                               ║");
+    println!("╠═══════════════════╦════════════╦═══════════════════╦═════════════════════════╣");
+    println!("║ ID                ║ Port       ║ Memory            ║ Handler                 ║");
+    println!("╠═══════════════════╬════════════╬═══════════════════╬═════════════════════════╣");
 
-    // TODO: Connect to orchestrator and list actual functions
+    for func in &config.functions {
+        let handler_display = func.handler_path.as_path()
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+        
+        println!(
+            "║ {:<17} ║ {:<10} ║ {:<17} ║ {:<23} ║",
+            func.id.as_str(),
+            func.trigger_port.value(),
+            format!("{}", func.memory_limit),
+            handler_display
+        );
+    }
+
+    println!("╚═══════════════════╩════════════╩═══════════════════╩═════════════════════════╝");
+    println!();
+    println!("Total: {} function(s)", config.functions.len());
 
     Ok(())
 }

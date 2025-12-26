@@ -1,0 +1,23 @@
+# Aetherless Multi-Service Configuration Example
+# Demonstrates running multiple functions simultaneously
+
+orchestrator:
+  warm_pool_size: 20
+  restore_timeout_ms: 10
+
+functions:
+  - id: auth-service
+    memory_limit_mb: 128
+    trigger_port: 9000
+    handler_path: examples/hello.py
+    timeout_ms: 5000
+    environment:
+      PYTHONUNBUFFERED: "1"
+
+  - id: user-service
+    memory_limit_mb: 256
+    trigger_port: 9001
+    handler_path: examples/rest_api.py
+    timeout_ms: 30000
+    environment:
+      PYTHONUNBUFFERED: "1"

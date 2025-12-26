@@ -79,14 +79,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match cli.command {
         Commands::Up { foreground } => commands::up::execute(&cli.config, foreground).await,
         Commands::Deploy { file, force } => commands::deploy::execute(&file, force).await,
-        Commands::Stats { dashboard, watch } => {
-            if dashboard {
-                tui::run_dashboard().await
-            } else {
-                commands::stats::execute(watch).await
-            }
-        }
-        Commands::List => commands::list::execute().await,
+        Commands::Stats { dashboard, watch } => commands::stats::execute(watch, dashboard).await,
+        Commands::List => commands::list::execute(&cli.config).await,
         Commands::Down => commands::down::execute().await,
         Commands::Validate { file } => commands::validate::execute(&file).await,
     }

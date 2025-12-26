@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::io::Read;
 use std::os::unix::net::UnixListener;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -62,7 +62,7 @@ pub async fn execute(
         registry.register(func_config.clone())?;
 
         // Spawn the handler process with Unix socket handshake
-        match spawn_handler_with_socket(&func_config, &socket_dir).await {
+        match spawn_handler_with_socket(func_config, &socket_dir).await {
             Ok((child, pid)) => {
                 println!(
                     "  ✓ {} started (PID: {}, Port: {})",
@@ -154,7 +154,7 @@ pub async fn execute(
 /// Spawn a handler process with Unix socket handshake
 async fn spawn_handler_with_socket(
     config: &FunctionConfig,
-    socket_dir: &PathBuf,
+    socket_dir: &Path,
 ) -> Result<(Child, u32), Box<dyn std::error::Error>> {
     let handler_path = config.handler_path.as_path();
     let socket_path = socket_dir.join(format!("{}.sock", config.id));

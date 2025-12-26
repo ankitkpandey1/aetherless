@@ -8,7 +8,7 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-36%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-44%20passed-brightgreen.svg)]()
 
 </div>
 

@@ -1,0 +1,11 @@
+# Aetherless REST API Example Configuration
+# Run with: aether -c examples/rest_api.yaml up --foreground
+
+functions:
+  - id: rest-api
+    memory_limit_mb: 256
+    trigger_port: 3000
+    handler_path: examples/rest_api.py
+    timeout_ms: 60000
+    environment:
+      PYTHONUNBUFFERED: "1"

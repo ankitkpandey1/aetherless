@@ -1,0 +1,11 @@
+# Aetherless Hello World Example Configuration
+# Run with: aether -c examples/hello.yaml up --foreground
+
+functions:
+  - id: hello-api
+    memory_limit_mb: 128
+    trigger_port: 8080
+    handler_path: examples/hello.py
+    timeout_ms: 30000
+    environment:
+      PYTHONUNBUFFERED: "1"
