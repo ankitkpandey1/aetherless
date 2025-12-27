@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2025 Ankit Kumar Pandey
+
+[package]
+name = "aetherless-benchmark"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ankit Kumar Pandey"]
+description = "Research-level benchmarking framework for Aetherless"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+aetherless-core = { path = "../aetherless-core" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+sysinfo = "0.30"
+thiserror = "1.0"
+anyhow = "1.0"
+clap = { version = "4.4", features = ["derive"] }
+tempfile = "3.9"
+uuid = { version = "1.6", features = ["v4"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "cold_start"
+harness = false
+
+[[bench]]
+name = "ipc_throughput"
+harness = false
+
+[[bench]]
+name = "ring_buffer"
+harness = false
+
+[[bench]]
+name = "e2e_latency"
+harness = false
+
+[[bin]]
+name = "run_benchmarks"
+path = "src/bin/run_benchmarks.rs"
+
+[features]
+default = []
+benchmark = []

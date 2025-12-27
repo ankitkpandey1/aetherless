@@ -1,0 +1,179 @@
+{
+  "benchmark_suite": "aetherless-benchmarks",
+  "version": "0.1.0",
+  "timestamp": "2025-12-27T14:21:45.876785+00:00",
+  "type": "baseline",
+  "results": [
+    {
+      "name": "ipc_http_json_64",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 352660,
+        "max_ns": 7281079,
+        "mean_ns": 581560.84,
+        "median_ns": 482981,
+        "p95_ns": 862198,
+        "p99_ns": 7281079,
+        "std_dev_ns": 689083.6352997462
+      },
+      "metadata": {
+        "method": "http_json",
+        "payload_size_bytes": 64,
+        "zero_copy": false
+      }
+    },
+    {
+      "name": "ipc_unix_socket_64",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 9590,
+        "max_ns": 255280,
+        "mean_ns": 51755.02,
+        "median_ns": 48807,
+        "p95_ns": 69098,
+        "p99_ns": 255280,
+        "std_dev_ns": 22137.182512586274
+      },
+      "metadata": {
+        "method": "unix_socket",
+        "payload_size_bytes": 64,
+        "zero_copy": false
+      }
+    },
+    {
+      "name": "ipc_tcp_localhost_64",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 65532,
+        "max_ns": 436386,
+        "mean_ns": 76835.49,
+        "median_ns": 68146,
+        "p95_ns": 86839,
+        "p99_ns": 436386,
+        "std_dev_ns": 42803.91876718978
+      },
+      "metadata": {
+        "method": "tcp_localhost",
+        "payload_size_bytes": 64,
+        "zero_copy": false
+      }
+    },
+    {
+      "name": "ipc_http_json_1024",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 390024,
+        "max_ns": 876678,
+        "mean_ns": 510579.73,
+        "median_ns": 475794,
+        "p95_ns": 769294,
+        "p99_ns": 876678,
+        "std_dev_ns": 98954.34821616461
+      },
+      "metadata": {
+        "method": "http_json",
+        "payload_size_bytes": 1024,
+        "zero_copy": false
+      }
+    },
+    {
+      "name": "ipc_unix_socket_1024",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 4764,
+        "max_ns": 102299,
+        "mean_ns": 39876.38,
+        "median_ns": 37545,
+        "p95_ns": 66674,
+        "p99_ns": 102299,
+        "std_dev_ns": 19095.08770073041
+      },
+      "metadata": {
+        "method": "unix_socket",
+        "payload_size_bytes": 1024,
+        "zero_copy": false
+      }
+    },
+    {
+      "name": "ipc_tcp_localhost_1024",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 52628,
+        "max_ns": 139224,
+        "mean_ns": 75025.9,
+        "median_ns": 71268,
+        "p95_ns": 102494,
+        "p99_ns": 139224,
+        "std_dev_ns": 11295.068613328473
+      },
+      "metadata": {
+        "method": "tcp_localhost",
+        "payload_size_bytes": 1024,
+        "zero_copy": false
+      }
+    },
+    {
+      "name": "ipc_http_json_4096",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 347494,
+        "max_ns": 677829,
+        "mean_ns": 495102.97,
+        "median_ns": 488729,
+        "p95_ns": 569990,
+        "p99_ns": 677829,
+        "std_dev_ns": 48082.96615950456
+      },
+      "metadata": {
+        "method": "http_json",
+        "payload_size_bytes": 4096,
+        "zero_copy": false
+      }
+    },
+    {
+      "name": "ipc_unix_socket_4096",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 9717,
+        "max_ns": 106739,
+        "mean_ns": 40299.19,
+        "median_ns": 36762,
+        "p95_ns": 62123,
+        "p99_ns": 106739,
+        "std_dev_ns": 15637.279256939008
+      },
+      "metadata": {
+        "method": "unix_socket",
+        "payload_size_bytes": 4096,
+        "zero_copy": false
+      }
+    },
+    {
+      "name": "ipc_tcp_localhost_4096",
+      "category": "ipc",
+      "iterations": 100,
+      "metrics": {
+        "min_ns": 56693,
+        "max_ns": 150364,
+        "mean_ns": 76790.35,
+        "median_ns": 72824,
+        "p95_ns": 104738,
+        "p99_ns": 150364,
+        "std_dev_ns": 13737.589773146254
+      },
+      "metadata": {
+        "method": "tcp_localhost",
+        "payload_size_bytes": 4096,
+        "zero_copy": false
+      }
+    }
+  ]
+}

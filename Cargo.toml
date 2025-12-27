@@ -4,6 +4,7 @@ members = [
     "aetherless-core",
     "aetherless-ebpf",
     "aetherless-cli",
+    "benchmark",
 ]
 
 [workspace.package]

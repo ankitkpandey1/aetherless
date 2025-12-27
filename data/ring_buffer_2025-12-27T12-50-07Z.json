@@ -1,0 +1,221 @@
+{
+  "benchmark_suite": "aetherless-benchmarks",
+  "version": "0.1.0",
+  "timestamp": "2025-12-27T12:50:06.997299412Z",
+  "system_info": {
+    "os": "Ubuntu",
+    "os_version": "25.04",
+    "kernel_version": "6.6.87.2-microsoft-standard-WSL2",
+    "cpu_model": "AMD Ryzen 7 9700X 8-Core Processor",
+    "cpu_cores": 16,
+    "memory_bytes": 16267804672,
+    "hostname": "DESKTOP-TNPGICU"
+  },
+  "results": [
+    {
+      "name": "ring_buffer_roundtrip_64",
+      "category": "ring_buffer",
+      "latency": {
+        "min_ns": 52,
+        "max_ns": 176,
+        "mean_ns": 65.4,
+        "median_ns": 52,
+        "p95_ns": 176,
+        "p99_ns": 176,
+        "std_dev_ns": 36.987024751931585,
+        "samples": [
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          52,
+          62,
+          176
+        ]
+      },
+      "iterations": 10,
+      "metadata": {
+        "payload_size_bytes": 64
+      }
+    },
+    {
+      "name": "ring_buffer_roundtrip_1024",
+      "category": "ring_buffer",
+      "latency": {
+        "min_ns": 135,
+        "max_ns": 249,
+        "mean_ns": 155.9,
+        "median_ns": 146,
+        "p95_ns": 249,
+        "p99_ns": 249,
+        "std_dev_ns": 33.398952079369195,
+        "samples": [
+          135,
+          135,
+          135,
+          135,
+          146,
+          146,
+          146,
+          155,
+          177,
+          249
+        ]
+      },
+      "iterations": 10,
+      "metadata": {
+        "payload_size_bytes": 1024
+      }
+    },
+    {
+      "name": "ring_buffer_roundtrip_4096",
+      "category": "ring_buffer",
+      "latency": {
+        "min_ns": 477,
+        "max_ns": 581,
+        "mean_ns": 498.9,
+        "median_ns": 488,
+        "p95_ns": 581,
+        "p99_ns": 581,
+        "std_dev_ns": 29.978158715971865,
+        "samples": [
+          477,
+          477,
+          477,
+          487,
+          487,
+          488,
+          498,
+          498,
+          519,
+          581
+        ]
+      },
+      "iterations": 10,
+      "metadata": {
+        "payload_size_bytes": 4096
+      }
+    },
+    {
+      "name": "ring_buffer_roundtrip_16384",
+      "category": "ring_buffer",
+      "latency": {
+        "min_ns": 1794,
+        "max_ns": 1888,
+        "mean_ns": 1822.9,
+        "median_ns": 1816,
+        "p95_ns": 1888,
+        "p99_ns": 1888,
+        "std_dev_ns": 24.068444071023787,
+        "samples": [
+          1794,
+          1806,
+          1815,
+          1816,
+          1816,
+          1816,
+          1816,
+          1826,
+          1836,
+          1888
+        ]
+      },
+      "iterations": 10,
+      "metadata": {
+        "payload_size_bytes": 16384
+      }
+    },
+    {
+      "name": "ring_buffer_roundtrip_65536",
+      "category": "ring_buffer",
+      "latency": {
+        "min_ns": 7678,
+        "max_ns": 7865,
+        "mean_ns": 7794.1,
+        "median_ns": 7802,
+        "p95_ns": 7865,
+        "p99_ns": 7865,
+        "std_dev_ns": 49.12321243567037,
+        "samples": [
+          7678,
+          7750,
+          7782,
+          7792,
+          7792,
+          7802,
+          7813,
+          7833,
+          7834,
+          7865
+        ]
+      },
+      "iterations": 10,
+      "metadata": {
+        "payload_size_bytes": 65536
+      }
+    },
+    {
+      "name": "cold_start_python_process",
+      "category": "cold_start",
+      "latency": {
+        "min_ns": 6659278,
+        "max_ns": 7518391,
+        "mean_ns": 6983760.0,
+        "median_ns": 6918187,
+        "p95_ns": 7518391,
+        "p99_ns": 7518391,
+        "std_dev_ns": 283467.27867251274,
+        "samples": [
+          6659278,
+          6705836,
+          6731983,
+          6779249,
+          6838315,
+          6918187,
+          7123495,
+          7219137,
+          7343729,
+          7518391
+        ]
+      },
+      "iterations": 10,
+      "metadata": {
+        "runtime": "python3"
+      }
+    },
+    {
+      "name": "ipc_shared_memory_1024",
+      "category": "ipc",
+      "latency": {
+        "min_ns": 135,
+        "max_ns": 270,
+        "mean_ns": 163.9,
+        "median_ns": 145,
+        "p95_ns": 270,
+        "p99_ns": 270,
+        "std_dev_ns": 46.068318831926135,
+        "samples": [
+          135,
+          135,
+          135,
+          135,
+          145,
+          145,
+          145,
+          156,
+          238,
+          270
+        ]
+      },
+      "iterations": 10,
+      "metadata": {
+        "payload_size_bytes": 1024,
+        "zero_copy": true,
+        "method": "shared_memory"
+      }
+    }
+  ]
+}

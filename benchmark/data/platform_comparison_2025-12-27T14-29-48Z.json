@@ -1,0 +1,214 @@
+{
+  "benchmark_suite": "aetherless-benchmarks",
+  "version": "0.1.0",
+  "timestamp": "2025-12-27T14:29:48.552041+00:00",
+  "type": "platform_comparison",
+  "aetherless_measured": {
+    "cold_start": {
+      "median_ms": 9.502788,
+      "p99_ms": 12.252675,
+      "source": "Measured locally",
+      "iterations": 20
+    },
+    "ipc": {
+      "median_us": 0.15,
+      "p99_us": 0.25,
+      "source": "Estimated from previous runs"
+    }
+  },
+  "published_benchmarks": {
+    "cold_start": {
+      "aws_lambda": {
+        "python": {
+          "median_ms": 250,
+          "p99_ms": 500,
+          "source": "SeBS Benchmark Suite"
+        },
+        "nodejs": {
+          "median_ms": 180,
+          "p99_ms": 350,
+          "source": "SeBS Benchmark Suite"
+        },
+        "java": {
+          "median_ms": 800,
+          "p99_ms": 2500,
+          "source": "AWS documentation"
+        }
+      },
+      "google_cloud_functions": {
+        "python": {
+          "median_ms": 400,
+          "p99_ms": 800,
+          "source": "SeBS Benchmark Suite"
+        },
+        "nodejs": {
+          "median_ms": 300,
+          "p99_ms": 600,
+          "source": "SeBS Benchmark Suite"
+        }
+      },
+      "azure_functions": {
+        "python": {
+          "median_ms": 350,
+          "p99_ms": 700,
+          "source": "SeBS Benchmark Suite"
+        },
+        "nodejs": {
+          "median_ms": 250,
+          "p99_ms": 500,
+          "source": "SeBS Benchmark Suite"
+        }
+      },
+      "knative": {
+        "python": {
+          "median_ms": 500,
+          "p99_ms": 1500,
+          "source": "Knative benchmarks"
+        },
+        "nodejs": {
+          "median_ms": 400,
+          "p99_ms": 1200,
+          "source": "Knative benchmarks"
+        }
+      },
+      "openfaas": {
+        "python": {
+          "median_ms": 200,
+          "p99_ms": 400,
+          "source": "OpenFaaS benchmarks"
+        },
+        "nodejs": {
+          "median_ms": 150,
+          "p99_ms": 300,
+          "source": "OpenFaaS benchmarks"
+        }
+      },
+      "firecracker": {
+        "python": {
+          "median_ms": 125,
+          "p99_ms": 200,
+          "source": "Firecracker paper"
+        }
+      }
+    },
+    "ipc_latency": {
+      "http_json": {
+        "median_us": 500,
+        "p99_us": 2000,
+        "source": "Typical REST API"
+      },
+      "grpc": {
+        "median_us": 100,
+        "p99_us": 500,
+        "source": "gRPC benchmarks"
+      },
+      "unix_socket": {
+        "median_us": 40,
+        "p99_us": 150,
+        "source": "Measured locally"
+      },
+      "tcp_localhost": {
+        "median_us": 70,
+        "p99_us": 200,
+        "source": "Measured locally"
+      }
+    }
+  },
+  "comparison": {
+    "cold_start_comparison": [
+      {
+        "platform": "Aetherless",
+        "runtime": "python",
+        "median_ms": 9.502788,
+        "p99_ms": 12.252675,
+        "source": "Measured locally",
+        "speedup_vs_lambda": 26.308068747824322
+      },
+      {
+        "platform": "Firecracker",
+        "runtime": "python",
+        "median_ms": 125,
+        "p99_ms": 200,
+        "source": "Firecracker paper",
+        "speedup_vs_lambda": 2.0
+      },
+      {
+        "platform": "Openfaas",
+        "runtime": "python",
+        "median_ms": 200,
+        "p99_ms": 400,
+        "source": "OpenFaaS benchmarks",
+        "speedup_vs_lambda": 1.25
+      },
+      {
+        "platform": "Aws Lambda",
+        "runtime": "python",
+        "median_ms": 250,
+        "p99_ms": 500,
+        "source": "SeBS Benchmark Suite",
+        "speedup_vs_lambda": 1.0
+      },
+      {
+        "platform": "Azure Functions",
+        "runtime": "python",
+        "median_ms": 350,
+        "p99_ms": 700,
+        "source": "SeBS Benchmark Suite",
+        "speedup_vs_lambda": 0.7142857142857143
+      },
+      {
+        "platform": "Google Cloud Functions",
+        "runtime": "python",
+        "median_ms": 400,
+        "p99_ms": 800,
+        "source": "SeBS Benchmark Suite",
+        "speedup_vs_lambda": 0.625
+      },
+      {
+        "platform": "Knative",
+        "runtime": "python",
+        "median_ms": 500,
+        "p99_ms": 1500,
+        "source": "Knative benchmarks",
+        "speedup_vs_lambda": 0.5
+      }
+    ],
+    "ipc_comparison": [
+      {
+        "method": "Aetherless SHM",
+        "median_us": 0.15,
+        "p99_us": 0.25,
+        "source": "Estimated from previous runs",
+        "speedup_vs_http": 3333.3333333333335
+      },
+      {
+        "method": "Unix Socket",
+        "median_us": 40,
+        "p99_us": 150,
+        "source": "Measured locally",
+        "speedup_vs_http": 12.5
+      },
+      {
+        "method": "Tcp Localhost",
+        "median_us": 70,
+        "p99_us": 200,
+        "source": "Measured locally",
+        "speedup_vs_http": 7.142857142857143
+      },
+      {
+        "method": "Grpc",
+        "median_us": 100,
+        "p99_us": 500,
+        "source": "gRPC benchmarks",
+        "speedup_vs_http": 5.0
+      },
+      {
+        "method": "Http Json",
+        "median_us": 500,
+        "p99_us": 2000,
+        "source": "Typical REST API",
+        "speedup_vs_http": 1.0
+      }
+    ]
+  }
+}
