@@ -121,8 +121,8 @@ fn generate_json_report() {
 
     for &size in PAYLOAD_SIZES {
         let name = format!("json_bench_{}_{}", size, std::process::id());
-        let region = SharedMemoryRegion::create(&name, 1024 * 1024)
-            .expect("Failed to create SHM region");
+        let region =
+            SharedMemoryRegion::create(&name, 1024 * 1024).expect("Failed to create SHM region");
         let buffer = RingBuffer::new(region).expect("Failed to create ring buffer");
         let payload = vec![0xABu8; size];
 

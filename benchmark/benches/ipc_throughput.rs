@@ -155,8 +155,7 @@ fn generate_json_report() {
     for &size in PAYLOAD_SIZES {
         // Shared memory benchmark
         let name = format!("json_ipc_shm_{}_{}", size, std::process::id());
-        let region =
-            SharedMemoryRegion::create(&name, 1024 * 1024).expect("Failed to create SHM");
+        let region = SharedMemoryRegion::create(&name, 1024 * 1024).expect("Failed to create SHM");
         let buffer = RingBuffer::new(region).expect("Failed to create ring buffer");
         let payload = vec![0xABu8; size];
 
@@ -186,11 +185,6 @@ fn generate_json_report() {
     }
 }
 
-criterion_group!(
-    benches,
-    bench_shm_ipc,
-    bench_unix_socket_ipc,
-    bench_tcp_ipc,
-);
+criterion_group!(benches, bench_shm_ipc, bench_unix_socket_ipc, bench_tcp_ipc,);
 
 criterion_main!(benches);

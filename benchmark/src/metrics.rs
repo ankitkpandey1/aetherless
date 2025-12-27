@@ -105,13 +105,7 @@ impl LatencyMetrics {
         let raw_samples = if keep_raw {
             if len > 10000 {
                 // Downsample for storage efficiency
-                Some(
-                    samples
-                        .iter()
-                        .step_by(len / 1000)
-                        .copied()
-                        .collect(),
-                )
+                Some(samples.iter().step_by(len / 1000).copied().collect())
             } else {
                 Some(samples)
             }

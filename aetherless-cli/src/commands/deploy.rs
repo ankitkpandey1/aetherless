@@ -19,10 +19,7 @@ pub async fn execute(file: &str, _force: bool) -> Result<(), Box<dyn std::error:
     for func in &config.functions {
         println!(
             "  • {} (port: {}, memory: {}, handler: {})",
-            func.id,
-            func.trigger_port,
-            func.memory_limit,
-            func.handler_path
+            func.id, func.trigger_port, func.memory_limit, func.handler_path
         );
     }
 

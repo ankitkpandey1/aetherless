@@ -22,11 +22,13 @@ pub async fn execute(config_path: &str) -> Result<(), Box<dyn std::error::Error>
     println!("╠═══════════════════╬════════════╬═══════════════════╬═════════════════════════╣");
 
     for func in &config.functions {
-        let handler_display = func.handler_path.as_path()
+        let handler_display = func
+            .handler_path
+            .as_path()
             .file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "unknown".to_string());
-        
+
         println!(
             "║ {:<17} ║ {:<10} ║ {:<17} ║ {:<23} ║",
             func.id.as_str(),

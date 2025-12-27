@@ -46,9 +46,8 @@ fn main() -> anyhow::Result<()> {
     let run_all = args.category.is_none();
     let categories: Vec<String> = args.category.unwrap_or_default();
 
-    let should_run = |cat: &str| -> bool {
-        run_all || categories.iter().any(|c| c.eq_ignore_ascii_case(cat))
-    };
+    let should_run =
+        |cat: &str| -> bool { run_all || categories.iter().any(|c| c.eq_ignore_ascii_case(cat)) };
 
     // Ring buffer benchmarks
     if should_run("ring_buffer") || should_run("ipc") {

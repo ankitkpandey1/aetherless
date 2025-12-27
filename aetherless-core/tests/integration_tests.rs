@@ -37,9 +37,7 @@ sock.send(b'READY')
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = std::fs::metadata(&handler_script)
-            .unwrap()
-            .permissions();
+        let mut perms = std::fs::metadata(&handler_script).unwrap().permissions();
         perms.set_mode(0o755);
         std::fs::set_permissions(&handler_script, perms).unwrap();
     }
@@ -71,9 +69,7 @@ sock.send(b'READY')
         match listener.accept() {
             Ok((mut stream, _)) => {
                 stream.set_nonblocking(false).ok();
-                stream
-                    .set_read_timeout(Some(Duration::from_secs(2)))
-                    .ok();
+                stream.set_read_timeout(Some(Duration::from_secs(2))).ok();
 
                 let mut buf = [0u8; 16];
                 if let Ok(n) = stream.read(&mut buf) {
@@ -125,8 +121,8 @@ functions:
     .expect("Failed to write config");
 
     // Load and validate
-    let config = ConfigLoader::load_file(config_path.to_str().unwrap())
-        .expect("Failed to load config");
+    let config =
+        ConfigLoader::load_file(config_path.to_str().unwrap()).expect("Failed to load config");
 
     assert_eq!(config.functions.len(), 1);
     assert_eq!(config.functions[0].id.as_str(), "test-function");
@@ -188,7 +184,9 @@ fn test_state_machine_transitions() {
 /// Test registry concurrent access
 #[test]
 fn test_registry_concurrent_access() {
-    use aetherless_core::{FunctionConfig, FunctionId, FunctionRegistry, HandlerPath, MemoryLimit, Port};
+    use aetherless_core::{
+        FunctionConfig, FunctionId, FunctionRegistry, HandlerPath, MemoryLimit, Port,
+    };
     use std::sync::Arc;
     use std::thread;
 
@@ -224,8 +222,7 @@ fn test_ring_buffer_write_read() {
 
     // Create shared memory region with unique name
     let name = format!("test_ring_{}", std::process::id());
-    let region = SharedMemoryRegion::create(&name, 64 * 1024)
-        .expect("Failed to create SHM region");
+    let region = SharedMemoryRegion::create(&name, 64 * 1024).expect("Failed to create SHM region");
 
     let buffer = RingBuffer::new(region).expect("Failed to create ring buffer");
 
@@ -312,8 +309,8 @@ server.handle_request()  # Handle one request then exit
     }
 
     // Create socket listener
-    let listener = std::os::unix::net::UnixListener::bind(&socket_path)
-        .expect("Failed to bind socket");
+    let listener =
+        std::os::unix::net::UnixListener::bind(&socket_path).expect("Failed to bind socket");
     listener.set_nonblocking(true).unwrap();
 
     // Spawn handler

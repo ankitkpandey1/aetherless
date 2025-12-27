@@ -15,7 +15,7 @@ pub async fn execute() -> Result<(), Box<dyn std::error::Error>> {
     if let Ok(pid_str) = fs::read_to_string(PID_FILE) {
         if let Ok(pid) = pid_str.trim().parse::<u32>() {
             println!("Stopping orchestrator (PID: {})...", pid);
-            
+
             let status = Command::new("kill")
                 .arg("-TERM")
                 .arg(pid.to_string())

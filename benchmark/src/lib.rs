@@ -22,5 +22,7 @@ pub mod metrics;
 pub mod reporter;
 
 pub use harness::BenchmarkHarness;
-pub use metrics::{BenchmarkCategory, BenchmarkReport, BenchmarkResult, LatencyMetrics, SystemInfo};
+pub use metrics::{
+    BenchmarkCategory, BenchmarkReport, BenchmarkResult, LatencyMetrics, SystemInfo,
+};
 pub use reporter::JsonReporter;

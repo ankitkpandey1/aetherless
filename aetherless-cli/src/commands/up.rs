@@ -97,10 +97,13 @@ pub async fn execute(
     }
 
     let running_count = processes.lock().await.len();
-    
+
     println!();
     println!("╔══════════════════════════════════════════════════════════════╗");
-    println!("║ Status: {} functions running                                 ║", running_count);
+    println!(
+        "║ Status: {} functions running                                 ║",
+        running_count
+    );
     println!("╠══════════════════════════════════════════════════════════════╣");
 
     for func_config in &config.functions {

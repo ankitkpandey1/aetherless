@@ -75,7 +75,12 @@ impl BenchmarkHarness {
     ///
     /// Setup is called before each iteration, teardown after.
     /// Only the operation time is measured.
-    pub fn run_with_setup<S, T, O>(&self, mut setup: S, mut operation: O, mut teardown: T) -> Vec<u64>
+    pub fn run_with_setup<S, T, O>(
+        &self,
+        mut setup: S,
+        mut operation: O,
+        mut teardown: T,
+    ) -> Vec<u64>
     where
         S: FnMut(),
         O: FnMut(),
