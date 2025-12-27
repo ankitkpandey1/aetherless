@@ -267,16 +267,37 @@ See [aetherless-ebpf/README.md](aetherless-ebpf/README.md) for details.
 
 ## Benchmarks
 
-Measured on AWS c5.xlarge (4 vCPU, 8GB RAM):
+Benchmarks comparing Aetherless against AWS Lambda, Google Cloud Functions, Azure Functions, Knative, and OpenFaaS.
 
-| Metric | Aetherless | AWS Lambda | Cloud Run |
-|--------|------------|------------|-----------|
-| Cold start (Python) | 12ms | 250ms | 180ms |
-| Cold start (Node) | 8ms | 180ms | 120ms |
-| P99 latency | 2ms | 15ms | 8ms |
-| Memory overhead | 2MB | 128MB min | 128MB min |
+### Cold Start Latency
 
-*Cold starts measured from first request to response. Aetherless uses CRIU warm pool.*
+| Platform | Median | P99 | Speedup |
+|----------|--------|-----|---------|
+| **Aetherless** | **9.5ms** | 12.3ms | **26× faster** |
+| Firecracker | 125ms | 200ms | 2× faster |
+| OpenFaaS | 200ms | 400ms | 1.25× faster |
+| AWS Lambda | 250ms | 500ms | baseline |
+| Knative | 500ms | 1,500ms | — |
+
+### IPC Latency (1KB payload)
+
+| Method | Median | Speedup vs HTTP |
+|--------|--------|-----------------|
+| **Aetherless SHM** | **148ns** | **3,333×** |
+| Unix Socket | 40μs | 12× |
+| gRPC | 100μs | 5× |
+| HTTP/JSON | 500μs | baseline |
+
+### Ring Buffer Performance
+
+| Payload | Median Latency | Throughput |
+|---------|----------------|------------|
+| 64 bytes | 64ns | 15.6M msg/s |
+| 1 KB | 190ns | 5.3M msg/s |
+| 64 KB | 7.93μs | 126K msg/s |
+
+> **Full methodology, test environment, and reproduction instructions**: See [BENCHMARK.md](BENCHMARK.md)
+
 
 ---
 
