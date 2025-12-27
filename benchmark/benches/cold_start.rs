@@ -149,7 +149,8 @@ fn bench_nodejs_process_spawn(c: &mut Criterion) {
     });
 }
 
-/// Generate JSON report with cold start measurements.
+/// Generate JSON report with cold start data.
+#[allow(dead_code)]
 fn generate_json_report() {
     let mut report = BenchmarkReport::new();
     let harness = BenchmarkHarness::new().warmup(5).iterations(50);

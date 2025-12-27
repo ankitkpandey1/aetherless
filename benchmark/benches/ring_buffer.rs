@@ -113,6 +113,7 @@ fn bench_crc32_overhead(c: &mut Criterion) {
 }
 
 /// Run benchmarks and generate JSON report for visualization.
+#[allow(dead_code)]
 fn generate_json_report() {
     use aetherless_benchmark::harness::BenchmarkHarness;
 
@@ -163,6 +164,7 @@ criterion_main!(benches);
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

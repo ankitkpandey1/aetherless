@@ -24,6 +24,7 @@ uuid = { version = "1.6", features = ["v4"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
+crc32fast = "1.4"
 
 [[bench]]
 name = "cold_start"

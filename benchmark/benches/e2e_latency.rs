@@ -7,7 +7,7 @@
 //! including handler orchestration overhead.
 
 use aetherless_benchmark::{
-    harness::BenchmarkHarness, BenchmarkCategory, BenchmarkReport, BenchmarkResult, JsonReporter,
+    BenchmarkReport, JsonReporter,
 };
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::io::{Read, Write};
@@ -129,7 +129,6 @@ fn bench_concurrent_requests(c: &mut Criterion) {
 
                         let handles: Vec<_> = (0..concurrency)
                             .map(|_| {
-                                let port = port;
                                 std::thread::spawn(move || {
                                     let mut stream = TcpStream::connect(format!(
                                         "127.0.0.1:{}",
@@ -240,8 +239,9 @@ sock.send(b'READY')
 }
 
 /// Generate JSON report with end-to-end latency data.
+#[allow(dead_code)]
 fn generate_json_report() {
-    let mut report = BenchmarkReport::new();
+    let report = BenchmarkReport::new();
 
     // Note: This would run actual E2E tests and collect samples
     // For now, we just set up the report structure

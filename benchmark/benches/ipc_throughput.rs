@@ -10,7 +10,6 @@
 
 use aetherless_benchmark::{
     harness::BenchmarkHarness, BenchmarkCategory, BenchmarkReport, BenchmarkResult, JsonReporter,
-    LatencyMetrics,
 };
 use aetherless_core::shm::{RingBuffer, SharedMemoryRegion};
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
@@ -80,7 +79,6 @@ fn bench_unix_socket_ipc(c: &mut Criterion) {
 
             // Client side
             let mut client = UnixStream::connect(&socket_path).expect("Connect failed");
-            client.set_nodelay(true).ok();
             let payload = vec![0xABu8; size];
             let mut read_buf = vec![0u8; size];
 
@@ -148,6 +146,7 @@ fn bench_tcp_ipc(c: &mut Criterion) {
 }
 
 /// Generate JSON report with IPC comparison data.
+#[allow(dead_code)]
 fn generate_json_report() {
     let mut report = BenchmarkReport::new();
     let harness = BenchmarkHarness::new().warmup(100).iterations(1000);
