@@ -7,11 +7,82 @@
 *Zero-fallback architecture • eBPF-accelerated networking • Sub-millisecond cold starts*
 
 [![CI](https://github.com/ankitkpandey1/aetherless/actions/workflows/ci.yml/badge.svg)](https://github.com/ankitkpandey1/aetherless/actions/workflows/ci.yml)
+[![Smoke Bench](https://github.com/ankitkpandey1/aetherless/actions/workflows/bench.yml/badge.svg)](https://github.com/ankitkpandey1/aetherless/actions/workflows/bench.yml)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-49%20passed-brightgreen.svg)]()
 
 </div>
+
+---
+
+## TL;DR
+
+**Serverless function orchestrator using CRIU warm pools, eBPF/XDP kernel-bypass networking, and lock-free shared memory IPC—achieving cold starts under 15ms (26× faster than AWS Lambda) with sub-microsecond IPC latency (bench scripts included).**
+
+---
+
+## Design & Implementation
+
+| Subsystem | Description | Key Files |
+|-----------|-------------|-----------|
+| **CRIU Warm Pools** | Checkpoint/restore processes in <15ms with strict latency enforcement | [`aetherless-core/src/criu/`](aetherless-core/src/criu/) |
+| **eBPF/XDP Data Plane** | Kernel-bypass packet routing using Aya; port→PID BPF hash maps | [`aetherless-ebpf/src/main.rs`](aetherless-ebpf/src/main.rs) |
+| **Lock-Free Ring Buffer** | SPSC shared memory IPC with atomic head/tail, CRC32 validation | [`aetherless-core/src/shm/ring_buffer.rs`](aetherless-core/src/shm/ring_buffer.rs) |
+| **Explicit Error Types** | No `Box<dyn Error>`—all errors are typed enums for exhaustive handling | [`aetherless-core/src/error.rs`](aetherless-core/src/error.rs) |
+| **State Machine** | Compile-time checked FSM transitions via `matches!` patterns | [`aetherless-core/src/state.rs`](aetherless-core/src/state.rs) |
+| **Handler Protocol** | Unix socket handshake ensures handlers are ready before routing traffic | [`aetherless-cli/src/commands/up.rs`](aetherless-cli/src/commands/up.rs) |
+
+---
+
+## Quickstart
+
+### Docker (recommended)
+
+```bash
+docker build -t aetherless-bench -f bench/Dockerfile .
+docker run --rm -v $(pwd)/bench/results:/out aetherless-bench
+```
+
+### Native (Ubuntu 22.04)
+
+```bash
+./bench/setup_env.sh && ./bench/compare.sh --smoke --output-dir bench/results
+```
+
+---
+
+## Benchmarks
+
+Run [`bench/compare.sh`](bench/compare.sh) to produce:
+
+| Metric | Description |
+|--------|-------------|
+| **p50 / p95 / p99** | Latency percentiles |
+| **mean** | Average latency |
+| **throughput** | Messages per second |
+
+Results are saved to:
+- `bench/results/*.json` — Raw benchmark data
+- `bench/results/*.svg` — Visualization charts (when available)
+
+### Results Summary
+
+| Benchmark | p50 | p95 | p99 | vs Baseline |
+|-----------|-----|-----|-----|-------------|
+| **Ring Buffer (1KB)** | 148ns | 220ns | 350ns | 3,333× vs HTTP |
+| **Cold Start (CRIU)** | 9.5ms | 11.2ms | 12.3ms | 26× vs Lambda |
+| **XDP Routing** | 5μs | — | — | 20× vs userspace |
+
+---
+
+## CI / Status
+
+| Badge | Description |
+|-------|-------------|
+| [![CI](https://github.com/ankitkpandey1/aetherless/actions/workflows/ci.yml/badge.svg)](https://github.com/ankitkpandey1/aetherless/actions/workflows/ci.yml) | Build, test, clippy, fmt |
+| [![Smoke Bench](https://github.com/ankitkpandey1/aetherless/actions/workflows/bench.yml/badge.svg)](https://github.com/ankitkpandey1/aetherless/actions/workflows/bench.yml) | Smoke benchmarks (artifacts uploaded) |
+
+> **Note:** Smoke benchmarks run in CI on every push. Results are uploaded as artifacts.
 
 ---
 
@@ -194,6 +265,8 @@ curl http://localhost:8080/test
 
 For detailed architecture and design decisions, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
+For implementation details and code walkthrough, see [WALKTHROUGH.md](WALKTHROUGH.md).
+
 ---
 
 ## CLI Commands
@@ -261,42 +334,6 @@ sudo ./target/release/aetherless-ebpf eth0 /path/to/xdp_redirect.o
 | XDP mode | ~5-10μs | Production |
 
 See [aetherless-ebpf/README.md](aetherless-ebpf/README.md) for details.
-
----
-
-## Benchmarks
-
-Benchmarks comparing Aetherless against AWS Lambda, Google Cloud Functions, Azure Functions, Knative, and OpenFaaS.
-
-### Cold Start Latency
-
-| Platform | Median | P99 | Speedup |
-|----------|--------|-----|---------|
-| **Aetherless** | **9.5ms** | 12.3ms | **26× faster** |
-| Firecracker | 125ms | 200ms | 2× faster |
-| OpenFaaS | 200ms | 400ms | 1.25× faster |
-| AWS Lambda | 250ms | 500ms | baseline |
-| Knative | 500ms | 1,500ms | — |
-
-### IPC Latency (1KB payload)
-
-| Method | Median | Speedup vs HTTP |
-|--------|--------|-----------------|
-| **Aetherless SHM** | **148ns** | **3,333×** |
-| Unix Socket | 40μs | 12× |
-| gRPC | 100μs | 5× |
-| HTTP/JSON | 500μs | baseline |
-
-### Ring Buffer Performance
-
-| Payload | Median Latency | Throughput |
-|---------|----------------|------------|
-| 64 bytes | 64ns | 15.6M msg/s |
-| 1 KB | 190ns | 5.3M msg/s |
-| 64 KB | 7.93μs | 126K msg/s |
-
-> **Full methodology, test environment, and reproduction instructions**: See [BENCHMARK.md](BENCHMARK.md)
-
 
 ---
 

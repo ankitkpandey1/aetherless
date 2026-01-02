@@ -1,0 +1,3 @@
+# Benchmark results directory
+# Results are saved here by bench/compare.sh
+# Files: *.json (raw data), *.svg (charts)
