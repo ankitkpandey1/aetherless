@@ -57,12 +57,23 @@ Status:
   Registered Ports: 0
 ```
 
-### 2. Load XDP Program
+### 2. Build and Load XDP Program
 
-With a compiled XDP program:
+First, compile the XDP program:
 
 ```bash
-sudo ./aetherless-ebpf eth0 /path/to/xdp_redirect.o
+# Option 1: Use build script
+./build_bpf.sh
+
+# Option 2: Manual compilation
+mkdir -p target/bpf
+clang -target bpf -O2 -g -c src/bpf/xdp_redirect.c -o target/bpf/xdp_redirect.o
+```
+
+Then load it with root privileges:
+
+```bash
+sudo ./target/release/aetherless-ebpf eth0 target/bpf/xdp_redirect.o
 ```
 
 Output:

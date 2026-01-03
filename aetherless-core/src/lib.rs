@@ -13,6 +13,7 @@ pub mod error;
 pub mod registry;
 pub mod shm;
 pub mod state;
+pub mod stats;
 pub mod types;
 
 // Re-export commonly used types

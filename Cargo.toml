@@ -49,6 +49,3 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 # Checksum for payload validation
 crc32fast = "1.4.2"
-
-# Testing
-tempfile = "3.19.1"

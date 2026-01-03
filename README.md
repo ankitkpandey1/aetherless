@@ -273,12 +273,13 @@ For implementation details and code walkthrough, see [WALKTHROUGH.md](WALKTHROUG
 
 | Command | Description |
 |---------|-------------|
-| `aether up --foreground` | Start orchestrator in foreground |
+| `aether up --foreground [--warm-pool]` | Start orchestrator (foreground, opt. warm pool) |
 | `aether down` | Stop the orchestrator |
-| `aether deploy <file>` | Validate configuration |
+| `aether deploy <file> [--force]` | Validate and deploy config (use --force for dry-run) |
 | `aether list` | List registered functions |
-| `aether stats --dashboard` | TUI dashboard with metrics |
+| `aether stats --dashboard` | TUI dashboard with live metrics |
 | `aether validate <file>` | Validate configuration file |
+| `curl localhost:9090/metrics` | Access Prometheus metrics |
 
 ---
 

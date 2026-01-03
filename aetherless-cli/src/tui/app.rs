@@ -15,7 +15,7 @@ use crossterm::{
 };
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Cell, Gauge, List, ListItem, Paragraph, Row, Table},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table},
 };
 
 /// Dashboard state.
@@ -24,6 +24,8 @@ struct App {
     should_quit: bool,
     /// Current tick for animations.
     tick: u64,
+    /// Latest stats loaded from SHM
+    stats: Option<aetherless_core::stats::AetherlessStats>,
 }
 
 impl App {
@@ -31,6 +33,7 @@ impl App {
         Self {
             should_quit: false,
             tick: 0,
+            stats: None,
         }
     }
 
@@ -51,6 +54,13 @@ pub async fn run_dashboard() -> Result<(), Box<dyn std::error::Error>> {
     // Main loop
     loop {
         terminal.draw(|frame| render(frame, &app))?;
+
+        // Try reading stats
+        if let Ok(content) = std::fs::read_to_string("/dev/shm/aetherless-stats.json") {
+             if let Ok(stats) = serde_json::from_str::<aetherless_core::stats::AetherlessStats>(&content) {
+                 app.stats = Some(stats);
+             }
+        }
 
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
@@ -77,7 +87,7 @@ pub async fn run_dashboard() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn render(frame: &mut Frame, _app: &App) {
+fn render(frame: &mut Frame, app: &App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -105,136 +115,125 @@ fn render(frame: &mut Frame, _app: &App) {
     // Main content - split into columns
     let content_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
         .split(main_layout[1]);
 
-    // Left column - Warm Pool
+    // Left column - Function List
     let left_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .constraints([Constraint::Percentage(100)])
         .split(content_layout[0]);
 
-    // Warm Pool table
-    let warm_pool_header = Row::new(vec![
+    // Function table
+    let header = Row::new(vec![
         Cell::from("Function ID"),
         Cell::from("State"),
         Cell::from("Memory"),
         Cell::from("Port"),
     ])
-    .style(
-        Style::default()
-            .add_modifier(Modifier::BOLD)
-            .fg(Color::Yellow),
-    );
+    .style(Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow));
 
-    let warm_pool_rows = vec![Row::new(vec![
-        Cell::from("(no functions)"),
-        Cell::from("-"),
-        Cell::from("-"),
-        Cell::from("-"),
-    ])
-    .style(Style::default().fg(Color::DarkGray))];
+    let rows: Vec<Row> = if let Some(stats) = &app.stats {
+        if stats.functions.is_empty() {
+             vec![Row::new(vec![
+                 Cell::from("(no functions running)"),
+                 Cell::from("-"),
+                 Cell::from("-"),
+                 Cell::from("-"),
+             ]).style(Style::default().fg(Color::DarkGray))]
+        } else {
+             let mut sorted_funcs: Vec<_> = stats.functions.values().collect();
+             sorted_funcs.sort_by_key(|f| &f.id);
 
-    let warm_pool = Table::new(
-        warm_pool_rows,
+             sorted_funcs.into_iter().map(|f| {
+                 let state_color = match f.state {
+                     aetherless_core::FunctionState::Running => Color::Green,
+                     aetherless_core::FunctionState::WarmSnapshot => Color::Blue,
+                     aetherless_core::FunctionState::Uninitialized => Color::Gray,
+                     _ => Color::White,
+                 };
+
+                 Row::new(vec![
+                     Cell::from(f.id.as_str()),
+                     Cell::from(format!("{:?}", f.state)).style(Style::default().fg(state_color)),
+                     Cell::from(format!("{} MB", f.memory_mb)),
+                     Cell::from(f.port.to_string()),
+                 ])
+             }).collect()
+        }
+    } else {
+        vec![Row::new(vec![
+            Cell::from("Waiting for orchestrator..."),
+            Cell::from("-"),
+            Cell::from("-"),
+            Cell::from("-"),
+        ]).style(Style::default().fg(Color::DarkGray))]
+    };
+
+    let table = Table::new(
+        rows,
         [
             Constraint::Percentage(40),
+            Constraint::Percentage(25),
             Constraint::Percentage(20),
-            Constraint::Percentage(20),
-            Constraint::Percentage(20),
+            Constraint::Percentage(15),
         ],
     )
-    .header(warm_pool_header)
+    .header(header)
     .block(
         Block::default()
-            .title(" Warm Pool ")
+            .title(" Functions ")
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Green)),
     );
-    frame.render_widget(warm_pool, left_layout[0]);
-
-    // eBPF Stats
-    let ebpf_stats = Paragraph::new(vec![
-        Line::from(vec![
-            Span::raw("XDP Program: "),
-            Span::styled("Not loaded", Style::default().fg(Color::Red)),
-        ]),
-        Line::from(vec![
-            Span::raw("Interface:   "),
-            Span::styled("lo", Style::default().fg(Color::White)),
-        ]),
-        Line::from(vec![
-            Span::raw("Packets:     "),
-            Span::styled("--", Style::default().fg(Color::DarkGray)),
-        ]),
-    ])
-    .block(
-        Block::default()
-            .title(" eBPF Data Plane ")
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Magenta)),
-    );
-    frame.render_widget(ebpf_stats, left_layout[1]);
+    frame.render_widget(table, left_layout[0]);
 
     // Right column - Metrics
     let right_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),
-            Constraint::Length(5),
-            Constraint::Length(5),
-            Constraint::Min(0),
+            Constraint::Length(8), // Active Stats
+            Constraint::Length(8), // Warm Pool
+            Constraint::Min(5),    // Events
         ])
         .split(content_layout[1]);
 
-    // SHM Latency gauge
-    let shm_gauge = Gauge::default()
-        .block(
-            Block::default()
-                .title(" SHM Latency ")
-                .borders(Borders::ALL),
-        )
-        .gauge_style(Style::default().fg(Color::Cyan))
-        .percent(0)
-        .label("-- μs");
-    frame.render_widget(shm_gauge, right_layout[0]);
-
-    // CRIU Restore gauge
-    let criu_gauge = Gauge::default()
-        .block(
-            Block::default()
-                .title(" CRIU Restore Time ")
-                .borders(Borders::ALL),
-        )
-        .gauge_style(Style::default().fg(Color::Yellow))
-        .percent(0)
-        .label("-- ms (limit: 15ms)");
-    frame.render_widget(criu_gauge, right_layout[1]);
-
-    // Memory usage
-    let mem_gauge = Gauge::default()
-        .block(
-            Block::default()
-                .title(" Memory Usage ")
-                .borders(Borders::ALL),
-        )
-        .gauge_style(Style::default().fg(Color::Green))
-        .percent(0)
-        .label("0 / 0 MB");
-    frame.render_widget(mem_gauge, right_layout[2]);
-
-    // Events log
-    let events: Vec<ListItem> = vec![
-        ListItem::new("Dashboard started"),
-        ListItem::new("Waiting for orchestrator..."),
+    // Stats
+    let active_count = app.stats.as_ref().map(|s| s.active_instances).unwrap_or(0);
+    let warm_pool_status = app.stats.as_ref().map(|s| s.warm_pool_active).unwrap_or(false);
+    
+    let stats_text = vec![
+        Line::from(vec![
+            Span::raw("Active Instances: "),
+            Span::styled(active_count.to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+        ]),
+         Line::from(vec![
+            Span::raw("Warm Pool: "),
+            if warm_pool_status {
+                Span::styled("ENABLED", Style::default().fg(Color::Cyan))
+            } else {
+                Span::styled("DISABLED", Style::default().fg(Color::Red))
+            },
+        ]),
+        Line::from(vec![
+            Span::raw("SHM Latency: "),
+             Span::styled("-- μs", Style::default().fg(Color::DarkGray)),
+        ]),
     ];
-    let events_list = List::new(events)
-        .block(Block::default().title(" Events ").borders(Borders::ALL))
-        .style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(events_list, right_layout[3]);
+    
+    let stats_block = Paragraph::new(stats_text)
+    .block(Block::default().title(" System Stats ").borders(Borders::ALL));
+    
+    frame.render_widget(stats_block, right_layout[0]);
+    
+    // Warm Pool Details (Placeholder if not detailed yet)
+    let wp_block = Block::default()
+        .title(" Warm Pool Metrics ")
+        .borders(Borders::ALL);
+    frame.render_widget(wp_block, right_layout[1]);
 
     // Footer
-    let footer = Paragraph::new(" Press 'q' to quit | 'r' to refresh ")
+    let footer = Paragraph::new(" Press 'q' to quit ")
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));

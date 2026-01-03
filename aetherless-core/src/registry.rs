@@ -143,6 +143,18 @@ impl FunctionRegistry {
             .ok_or_else(|| AetherError::FunctionNotFound(id.clone()))
     }
 
+    /// Get a snapshot of all registered functions and their states.
+    pub fn snapshot(&self) -> Vec<(FunctionId, FunctionState, FunctionConfig)> {
+        self.functions
+            .iter()
+            .map(|entry| (
+                entry.key().clone(),
+                entry.value().state_machine.state(),
+                entry.value().config.clone(),
+            ))
+            .collect()
+    }
+
     /// Update the configuration for a function (hot-reload).
     pub fn update_config(&self, config: FunctionConfig) -> AetherResult<()> {
         let mut entry = self

@@ -885,3 +885,26 @@ sudo ./target/debug/aetherless-ebpf eth0 xdp_redirect.o
 | CRIU restore | `snapshot.rs:213-302` | Restore with latency enforcement |
 | State transitions | `state.rs:44-61` | Valid FSM transitions |
 | Error types | `error.rs` | All explicit error enums |
+
+---
+
+## Metrics & Observability
+
+Aetherless provides built-in observability without external sidecars.
+
+### Prometheus Metrics
+The orchestrator exposes a `/metrics` endpoint on port `9090` (default).
+
+| Metric Name | Type | Description |
+|-------------|------|-------------|
+| `function_restores_total` | Counter | Number of warm snapshot restores |
+| `function_restore_duration_seconds` | Histogram | Latency of restores (buckets <2ms to 100ms) |
+| `warm_pool_size` | Gauge | Current number of ready-to-use snapshots |
+| `function_cold_starts_total` | Counter | Full cold starts (process spawn) |
+
+### TUI Dashboard Architecture
+The live dashboard (`aether stats --dashboard`) runs as a separate process to ensure orchestrator stability.
+
+1. **Orchestrator** writes stat snapshots to `/dev/shm/aetherless-stats.json` every 100ms.
+2. **TUI Process** (`ratatui`) polls this file for lock-free updates.
+3. **Reasoning**: Decoupling visualization from the core loop prevents TUI rendering stalls from affecting request processing latency.

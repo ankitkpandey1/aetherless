@@ -8,7 +8,11 @@
 use clap::{Parser, Subcommand};
 
 mod commands;
+mod metrics;
 mod tui;
+mod warm_pool;
+
+pub use warm_pool::WarmPoolManager;
 
 /// Aetherless - High-performance serverless function orchestrator
 #[derive(Parser)]
@@ -34,6 +38,10 @@ pub enum Commands {
         /// Run in foreground (don't daemonize)
         #[arg(short, long)]
         foreground: bool,
+
+        /// Enable CRIU warm pools for sub-15ms cold starts
+        #[arg(long)]
+        warm_pool: bool,
     },
 
     /// Deploy a function configuration
@@ -80,7 +88,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Dispatch to command handlers
     match cli.command {
-        Commands::Up { foreground } => commands::up::execute(&cli.config, foreground).await,
+        Commands::Up {
+            foreground,
+            warm_pool,
+        } => commands::up::execute(&cli.config, foreground, warm_pool).await,
         Commands::Deploy { file, force } => commands::deploy::execute(&file, force).await,
         Commands::Stats { dashboard, watch } => commands::stats::execute(watch, dashboard).await,
         Commands::List => commands::list::execute(&cli.config).await,

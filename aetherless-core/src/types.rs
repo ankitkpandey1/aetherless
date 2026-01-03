@@ -20,7 +20,7 @@ const MAX_MEMORY_LIMIT: u64 = 16 * 1024 * 1024 * 1024;
 
 /// Validated function identifier.
 /// Must be non-empty, alphanumeric with hyphens/underscores, max 64 chars.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct FunctionId(String);
 

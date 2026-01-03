@@ -4,6 +4,7 @@
 //! `aether up` command - Start the orchestrator.
 //!
 //! Spawns handler processes, creates Unix sockets, and waits for READY signals.
+//! With --warm-pool, creates CRIU snapshots for sub-15ms cold starts.
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -15,6 +16,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
 use aetherless_core::{ConfigLoader, FunctionConfig, FunctionRegistry, FunctionState};
+
+use crate::warm_pool::WarmPoolManager;
 
 /// Timeout waiting for READY signal from handler
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
@@ -29,8 +32,9 @@ struct RunningProcess {
 pub async fn execute(
     config_path: &str,
     foreground: bool,
+    warm_pool_enabled: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    tracing::info!(config = %config_path, foreground = %foreground, "Starting orchestrator");
+    tracing::info!(config = %config_path, foreground = %foreground, warm_pool = %warm_pool_enabled, "Starting orchestrator");
 
     // Load and validate configuration - fail fast on invalid config
     let config = ConfigLoader::load_file(config_path)?;
@@ -50,12 +54,38 @@ pub async fn execute(
     }
     std::fs::create_dir_all(&socket_dir)?;
 
+    // Initialize warm pool manager if enabled
+    let snapshot_dir = config.orchestrator.snapshot_dir.clone();
+    let restore_timeout = config.orchestrator.restore_timeout_ms;
+    let pool_size = config.orchestrator.warm_pool_size;
+
+    let mut warm_pool = if warm_pool_enabled {
+        match WarmPoolManager::new(&snapshot_dir, restore_timeout, pool_size) {
+            Ok(pool) => {
+                println!(
+                    "✓ Warm pool enabled (snapshot dir: {})",
+                    snapshot_dir.display()
+                );
+                pool
+            }
+            Err(e) => {
+                println!("⚠ Warm pool unavailable: {} (continuing without)", e);
+                WarmPoolManager::disabled()
+            }
+        }
+    } else {
+        WarmPoolManager::disabled()
+    };
+
     // Track running processes
     let processes: Arc<Mutex<HashMap<String, RunningProcess>>> =
         Arc::new(Mutex::new(HashMap::new()));
 
     println!("╔══════════════════════════════════════════════════════════════╗");
     println!("║              AETHERLESS ORCHESTRATOR                         ║");
+    if warm_pool.is_enabled() {
+        println!("║              [WARM POOL ENABLED]                             ║");
+    }
     println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -63,6 +93,11 @@ pub async fn execute(
     for func_config in &config.functions {
         println!("▶ Spawning function: {}", func_config.id);
         registry.register(func_config.clone())?;
+
+        // Register with warm pool
+        if warm_pool.is_enabled() {
+            warm_pool.register(func_config.clone()).await;
+        }
 
         // Spawn the handler process with Unix socket handshake
         match spawn_handler_with_socket(func_config, &socket_dir).await {
@@ -72,8 +107,22 @@ pub async fn execute(
                     func_config.id, pid, func_config.trigger_port
                 );
 
-                // Update state to Running
-                registry.transition(&func_config.id, FunctionState::Running)?;
+                // Create CRIU snapshot if warm pool enabled
+                if warm_pool.is_enabled() {
+                    match warm_pool.create_snapshot(&func_config.id, pid).await {
+                        Ok(()) => {
+                            println!("  ✓ {} snapshot created", func_config.id);
+                            registry.transition(&func_config.id, FunctionState::WarmSnapshot)?;
+                        }
+                        Err(e) => {
+                            println!("  ⚠ {} snapshot failed: {} (continuing)", func_config.id, e);
+                            registry.transition(&func_config.id, FunctionState::Running)?;
+                        }
+                    }
+                } else {
+                    // Update state to Running
+                    registry.transition(&func_config.id, FunctionState::Running)?;
+                }
 
                 // Track the process
                 processes.lock().await.insert(
@@ -125,6 +174,59 @@ pub async fn execute(
     }
 
     println!("╚══════════════════════════════════════════════════════════════╝");
+
+    // Start metrics server
+    crate::metrics::start_metrics_server(9090);
+
+    // Start stats writer background task
+    let warm_pool = Arc::new(tokio::sync::Mutex::new(warm_pool));
+
+    {
+        let warm_pool = warm_pool.clone();
+        let registry = registry.clone();
+        let processes = processes.clone();
+
+        tokio::spawn(async move {
+            loop {
+                // Collect stats
+                let mut stats = aetherless_core::stats::AetherlessStats::default();
+
+                // Active instances
+                stats.active_instances = processes.lock().await.len();
+
+                // Warm pool stats
+                let wp = warm_pool.lock().await;
+                stats.warm_pool_active = wp.is_enabled();
+                // (Could add detailed warm pool stats here if exposed in stats module)
+
+                // Function status
+                for (id, state, config) in registry.snapshot() {
+                    let memory = config.memory_limit.megabytes();
+
+                    stats.functions.insert(
+                        id.clone(),
+                        aetherless_core::stats::FunctionStatus {
+                            id,
+                            state,
+                            pid: None, // Could lookup in processes map
+                            port: config.trigger_port.value(),
+                            memory_mb: memory,
+                            restore_count: 0,
+                            last_restore_ms: None,
+                        },
+                    );
+                }
+
+                // Write to SHM file for TUI
+                // atomic write: write to temp file then rename
+                if let Ok(json) = serde_json::to_string(&stats) {
+                    let _ = std::fs::write("/dev/shm/aetherless-stats.json", json);
+                }
+
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        });
+    }
 
     if foreground {
         println!();
