@@ -135,7 +135,7 @@ impl WarmPoolManager {
             entry.snapshot_pid = Some(pid);
             entry.has_snapshot = true;
         }
-        
+
         // Update metrics
         crate::metrics::WARM_POOL_SIZE
             .with_label_values(&[function_id.as_str()])
@@ -194,7 +194,7 @@ impl WarmPoolManager {
                 entry.last_restore_ms = Some(elapsed_ms);
             }
         }
-        
+
         // Update metrics
         crate::metrics::FUNCTION_RESTORES
             .with_label_values(&[function_id.as_str()])

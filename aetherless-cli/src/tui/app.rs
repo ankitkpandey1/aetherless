@@ -57,9 +57,11 @@ pub async fn run_dashboard() -> Result<(), Box<dyn std::error::Error>> {
 
         // Try reading stats
         if let Ok(content) = std::fs::read_to_string("/dev/shm/aetherless-stats.json") {
-             if let Ok(stats) = serde_json::from_str::<aetherless_core::stats::AetherlessStats>(&content) {
-                 app.stats = Some(stats);
-             }
+            if let Ok(stats) =
+                serde_json::from_str::<aetherless_core::stats::AetherlessStats>(&content)
+            {
+                app.stats = Some(stats);
+            }
         }
 
         if event::poll(Duration::from_millis(100))? {
@@ -131,35 +133,44 @@ fn render(frame: &mut Frame, app: &App) {
         Cell::from("Memory"),
         Cell::from("Port"),
     ])
-    .style(Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow));
+    .style(
+        Style::default()
+            .add_modifier(Modifier::BOLD)
+            .fg(Color::Yellow),
+    );
 
     let rows: Vec<Row> = if let Some(stats) = &app.stats {
         if stats.functions.is_empty() {
-             vec![Row::new(vec![
-                 Cell::from("(no functions running)"),
-                 Cell::from("-"),
-                 Cell::from("-"),
-                 Cell::from("-"),
-             ]).style(Style::default().fg(Color::DarkGray))]
+            vec![Row::new(vec![
+                Cell::from("(no functions running)"),
+                Cell::from("-"),
+                Cell::from("-"),
+                Cell::from("-"),
+            ])
+            .style(Style::default().fg(Color::DarkGray))]
         } else {
-             let mut sorted_funcs: Vec<_> = stats.functions.values().collect();
-             sorted_funcs.sort_by_key(|f| &f.id);
+            let mut sorted_funcs: Vec<_> = stats.functions.values().collect();
+            sorted_funcs.sort_by_key(|f| &f.id);
 
-             sorted_funcs.into_iter().map(|f| {
-                 let state_color = match f.state {
-                     aetherless_core::FunctionState::Running => Color::Green,
-                     aetherless_core::FunctionState::WarmSnapshot => Color::Blue,
-                     aetherless_core::FunctionState::Uninitialized => Color::Gray,
-                     _ => Color::White,
-                 };
+            sorted_funcs
+                .into_iter()
+                .map(|f| {
+                    let state_color = match f.state {
+                        aetherless_core::FunctionState::Running => Color::Green,
+                        aetherless_core::FunctionState::WarmSnapshot => Color::Blue,
+                        aetherless_core::FunctionState::Uninitialized => Color::Gray,
+                        _ => Color::White,
+                    };
 
-                 Row::new(vec![
-                     Cell::from(f.id.as_str()),
-                     Cell::from(format!("{:?}", f.state)).style(Style::default().fg(state_color)),
-                     Cell::from(format!("{} MB", f.memory_mb)),
-                     Cell::from(f.port.to_string()),
-                 ])
-             }).collect()
+                    Row::new(vec![
+                        Cell::from(f.id.as_str()),
+                        Cell::from(format!("{:?}", f.state))
+                            .style(Style::default().fg(state_color)),
+                        Cell::from(format!("{} MB", f.memory_mb)),
+                        Cell::from(f.port.to_string()),
+                    ])
+                })
+                .collect()
         }
     } else {
         vec![Row::new(vec![
@@ -167,7 +178,8 @@ fn render(frame: &mut Frame, app: &App) {
             Cell::from("-"),
             Cell::from("-"),
             Cell::from("-"),
-        ]).style(Style::default().fg(Color::DarkGray))]
+        ])
+        .style(Style::default().fg(Color::DarkGray))]
     };
 
     let table = Table::new(
@@ -200,14 +212,23 @@ fn render(frame: &mut Frame, app: &App) {
 
     // Stats
     let active_count = app.stats.as_ref().map(|s| s.active_instances).unwrap_or(0);
-    let warm_pool_status = app.stats.as_ref().map(|s| s.warm_pool_active).unwrap_or(false);
-    
+    let warm_pool_status = app
+        .stats
+        .as_ref()
+        .map(|s| s.warm_pool_active)
+        .unwrap_or(false);
+
     let stats_text = vec![
         Line::from(vec![
             Span::raw("Active Instances: "),
-            Span::styled(active_count.to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                active_count.to_string(),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
-         Line::from(vec![
+        Line::from(vec![
             Span::raw("Warm Pool: "),
             if warm_pool_status {
                 Span::styled("ENABLED", Style::default().fg(Color::Cyan))
@@ -217,15 +238,18 @@ fn render(frame: &mut Frame, app: &App) {
         ]),
         Line::from(vec![
             Span::raw("SHM Latency: "),
-             Span::styled("-- μs", Style::default().fg(Color::DarkGray)),
+            Span::styled("-- μs", Style::default().fg(Color::DarkGray)),
         ]),
     ];
-    
-    let stats_block = Paragraph::new(stats_text)
-    .block(Block::default().title(" System Stats ").borders(Borders::ALL));
-    
+
+    let stats_block = Paragraph::new(stats_text).block(
+        Block::default()
+            .title(" System Stats ")
+            .borders(Borders::ALL),
+    );
+
     frame.render_widget(stats_block, right_layout[0]);
-    
+
     // Warm Pool Details (Placeholder if not detailed yet)
     let wp_block = Block::default()
         .title(" Warm Pool Metrics ")

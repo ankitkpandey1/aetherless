@@ -122,6 +122,11 @@ pub async fn execute(
                 } else {
                     // Update state to Running
                     registry.transition(&func_config.id, FunctionState::Running)?;
+
+                    // Track cold start
+                    crate::metrics::COLD_STARTS
+                        .with_label_values(&[func_config.id.as_str()])
+                        .inc();
                 }
 
                 // Track the process
@@ -189,10 +194,10 @@ pub async fn execute(
         tokio::spawn(async move {
             loop {
                 // Collect stats
-                let mut stats = aetherless_core::stats::AetherlessStats::default();
-
-                // Active instances
-                stats.active_instances = processes.lock().await.len();
+                let mut stats = aetherless_core::stats::AetherlessStats {
+                    active_instances: processes.lock().await.len(),
+                    ..Default::default()
+                };
 
                 // Warm pool stats
                 let wp = warm_pool.lock().await;

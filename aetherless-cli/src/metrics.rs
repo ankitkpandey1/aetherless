@@ -1,5 +1,10 @@
-use tokio::net::TcpListener;
+use lazy_static::lazy_static;
+use prometheus::{
+    register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, HistogramVec,
+    IntCounterVec, IntGaugeVec,
+};
 use tokio::io::AsyncWriteExt;
+use tokio::net::TcpListener;
 
 lazy_static! {
     pub static ref FUNCTION_RESTORES: IntCounterVec = register_int_counter_vec!(
@@ -31,6 +36,12 @@ lazy_static! {
 
 /// Start the metrics server in a background task.
 pub fn start_metrics_server(port: u16) {
+    // Force initialization of metrics
+    lazy_static::initialize(&FUNCTION_RESTORES);
+    lazy_static::initialize(&RESTORE_DURATION);
+    lazy_static::initialize(&WARM_POOL_SIZE);
+    lazy_static::initialize(&COLD_STARTS);
+
     tokio::spawn(async move {
         let addr = format!("0.0.0.0:{}", port);
         match TcpListener::bind(&addr).await {
@@ -41,11 +52,12 @@ pub fn start_metrics_server(port: u16) {
                         tokio::spawn(async move {
                             let body = metrics_handler();
                             let response = format!(
-                                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: text/plain\r\n\r\n{}",
+                                "HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Length: {}\r\nContent-Type: text/plain\r\n\r\n{}",
                                 body.len(),
                                 body
                             );
                             let _ = socket.write_all(response.as_bytes()).await;
+                            let _ = socket.flush().await;
                         });
                     }
                 }

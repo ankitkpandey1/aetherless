@@ -147,11 +147,13 @@ impl FunctionRegistry {
     pub fn snapshot(&self) -> Vec<(FunctionId, FunctionState, FunctionConfig)> {
         self.functions
             .iter()
-            .map(|entry| (
-                entry.key().clone(),
-                entry.value().state_machine.state(),
-                entry.value().config.clone(),
-            ))
+            .map(|entry| {
+                (
+                    entry.key().clone(),
+                    entry.value().state_machine.state(),
+                    entry.value().config.clone(),
+                )
+            })
             .collect()
     }
 
