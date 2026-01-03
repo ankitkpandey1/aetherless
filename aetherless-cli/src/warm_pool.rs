@@ -312,11 +312,32 @@ impl WarmPoolManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aetherless_core::types::{MemoryLimit, Port};
+
+    fn make_config(name: &str) -> FunctionConfig {
+        FunctionConfig {
+            id: FunctionId::new(name).unwrap(),
+            memory_limit: MemoryLimit::from_mb(128).unwrap(),
+            trigger_port: Port::new(8080).unwrap(),
+            handler_path: aetherless_core::types::HandlerPath::new_unchecked("/bin/echo"),
+            environment: std::collections::HashMap::new(),
+            timeout_ms: 30000,
+        }
+    }
 
     #[tokio::test]
     async fn test_warm_pool_disabled() {
         let pool = WarmPoolManager::disabled();
         assert!(!pool.is_enabled());
+
+        let config = make_config("test");
+        pool.register(config.clone()).await;
+        // Should produce no side effects if disabled
+        assert!(!pool.has_snapshot(&config.id).await);
+        assert_eq!(
+            pool.get_state(&config.id).await,
+            FunctionState::Uninitialized
+        );
     }
 
     #[tokio::test]
@@ -326,4 +347,8 @@ mod tests {
         assert_eq!(stats.total_functions, 0);
         assert_eq!(stats.warm_count, 0);
     }
+
+    // Since we can't easily mock SnapshotManager without trait abstraction,
+    // we test the internal logic by creating a mock-able manager structure in future refactors.
+    // For now, we verified behavior when disabled (most common CLI case).
 }

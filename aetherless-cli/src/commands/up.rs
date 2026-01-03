@@ -29,6 +29,18 @@ struct RunningProcess {
     pid: u32,
 }
 
+/// Execute the `up` command.
+///
+/// This is the main entry point for the orchestrator runtime.
+///
+/// # Arguments
+/// * `config_path` - Path to the YAML configuration file.
+/// * `foreground` - If true, run blocking in foreground.
+/// * `warm_pool_enabled` - If true, enable CRIU snapshotting.
+///
+/// # Errors
+/// Returns an error if configuration is invalid, socket binding fails,
+/// or handler processes cannot be spawned.
 pub async fn execute(
     config_path: &str,
     foreground: bool,

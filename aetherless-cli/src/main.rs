@@ -33,7 +33,19 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Start the orchestrator
+    /// Start the orchestrator in the current terminal.
+    ///
+    /// This command initializes the function registry, starts the Unix socket listener,
+    /// and spawns handler processes. It manages the full lifecycle of functions.
+    ///
+    /// Examples:
+    /// ```bash
+    /// # Start in foreground
+    /// aether up --foreground
+    ///
+    /// # Start with warm pools enabled
+    /// aether up --warm-pool
+    /// ```
     Up {
         /// Run in foreground (don't daemonize)
         #[arg(short, long)]
@@ -44,7 +56,10 @@ pub enum Commands {
         warm_pool: bool,
     },
 
-    /// Deploy a function configuration
+    /// Deploy a function configuration.
+    ///
+    /// Validates the configuration file syntax and logical correctness (e.g. handler existence).
+    /// If validation passes, it provides instructions for starting the orchestrator.
     Deploy {
         /// Path to the function YAML file
         file: String,
@@ -54,7 +69,9 @@ pub enum Commands {
         force: bool,
     },
 
-    /// Show statistics and metrics
+    /// Show statistics and metrics.
+    ///
+    /// Displays either a one-time snapshot of system stats or a live TUI dashboard.
     Stats {
         /// Show TUI dashboard instead of one-shot stats
         #[arg(short, long)]
@@ -65,13 +82,13 @@ pub enum Commands {
         watch: bool,
     },
 
-    /// List registered functions
+    /// List registered functions.
     List,
 
-    /// Stop the orchestrator
+    /// Stop the orchestrator and all running functions.
     Down,
 
-    /// Validate a configuration file
+    /// Validate a configuration file without deploying.
     Validate {
         /// Path to the configuration file
         file: String,

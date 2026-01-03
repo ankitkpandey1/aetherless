@@ -12,26 +12,26 @@ lazy_static! {
         "Total number of CRIU restores performed",
         &["function_id"]
     )
-    .unwrap();
+    .expect("Failed to register FUNCTION_RESTORES metric");
     pub static ref RESTORE_DURATION: HistogramVec = register_histogram_vec!(
         "function_restore_duration_seconds",
         "Time taken to restore a function from snapshot",
         &["function_id"],
         vec![0.001, 0.002, 0.005, 0.010, 0.015, 0.020, 0.050, 0.100] // Buckets focused on 15ms target
     )
-    .unwrap();
+    .expect("Failed to register RESTORE_DURATION metric");
     pub static ref WARM_POOL_SIZE: IntGaugeVec = register_int_gauge_vec!(
         "warm_pool_size",
         "Number of available warm snapshots",
         &["function_id"]
     )
-    .unwrap();
+    .expect("Failed to register WARM_POOL_SIZE metric");
     pub static ref COLD_STARTS: IntCounterVec = register_int_counter_vec!(
         "function_cold_starts_total",
         "Total number of full cold starts (no snapshot)",
         &["function_id"]
     )
-    .unwrap();
+    .expect("Failed to register COLD_STARTS metric");
 }
 
 /// Start the metrics server in a background task.
@@ -79,4 +79,23 @@ fn metrics_handler() -> String {
     }
 
     String::from_utf8(buffer).unwrap_or_else(|_| String::from("Encoding error"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_metrics_handler_output() {
+        // Initialize metrics first to ensure registry is not empty
+        lazy_static::initialize(&FUNCTION_RESTORES);
+        lazy_static::initialize(&WARM_POOL_SIZE);
+        
+        let output = metrics_handler();
+        
+        // Now we expect output
+        assert!(!output.is_empty());
+        assert!(output.contains("function_restores_total"));
+        assert!(output.contains("warm_pool_size"));
+    }
 }
