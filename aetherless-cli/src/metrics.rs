@@ -90,9 +90,9 @@ mod tests {
         // Initialize metrics first to ensure registry is not empty
         lazy_static::initialize(&FUNCTION_RESTORES);
         lazy_static::initialize(&WARM_POOL_SIZE);
-        
+
         let output = metrics_handler();
-        
+
         // Now we expect output
         assert!(!output.is_empty());
         assert!(output.contains("function_restores_total"));
