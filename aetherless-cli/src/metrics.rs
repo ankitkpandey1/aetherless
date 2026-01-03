@@ -91,6 +91,9 @@ mod tests {
         lazy_static::initialize(&FUNCTION_RESTORES);
         lazy_static::initialize(&WARM_POOL_SIZE);
 
+        // Increment a counter so gather() produces output (Prometheus optimization)
+        FUNCTION_RESTORES.with_label_values(&["test_func"]).inc();
+
         let output = metrics_handler();
 
         // Now we expect output
