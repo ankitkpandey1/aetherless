@@ -908,3 +908,46 @@ The live dashboard (`aether stats --dashboard`) runs as a separate process to en
 1. **Orchestrator** writes stat snapshots to `/dev/shm/aetherless-stats.json` every 100ms.
 2. **TUI Process** (`ratatui`) polls this file for lock-free updates.
 3. **Reasoning**: Decoupling visualization from the core loop prevents TUI rendering stalls from affecting request processing latency.
+
+---
+
+## Autoscaling (Phase 9)
+
+Aetherless supports dynamic horizontal pod autoscaling (HPA) logic built directly into the orchestrator.
+
+### Components
+- **Metrics Collection**: Real-time tracking of requests/sec and concurrency.
+- **Scaling Decision**: `desired_replicas = ceil(total_load / target_concurrency)`.
+- **Stabilization**: Prevents flapping by adding hysteresis to scale-down events.
+
+### Source: [aetherless-core/src/autoscaler.rs](aetherless-core/src/autoscaler.rs)
+
+```rust
+pub fn calculate_replicas(&self, current_replicas: usize, total_load: f64) -> usize {
+    let desired = (total_load / self.config.target_concurrency).ceil() as usize;
+    desired.clamp(self.config.min_replicas, self.config.max_replicas)
+}
+```
+
+---
+
+## Distributed State (Phase 10)
+
+For multi-node deployments, Aetherless uses a UDP-based Gossip protocol (SWIM-like) to discover peers and sync state without a central database (like etcd).
+
+### Components
+- **Discovery**: Nodes multicast `Hello` and `Heartbeat` messages.
+- **Membership List**: Each node maintains an eventually consistent list of peers.
+- **Failure Detection**: (Planned) Phi Accrual failure detector.
+
+### Source: [aetherless-core/src/cluster.rs](aetherless-core/src/cluster.rs)
+
+```rust
+// Gossip Loop
+loop {
+    let msg = GossipMessage::Heartbeat { node_id: self.id, timestamp: now() };
+    for peer in self.random_peers(3) {
+        self.send(peer, msg).await;
+    }
+}
+```

@@ -30,7 +30,10 @@
 | **Lock-Free Ring Buffer** | SPSC shared memory IPC with atomic head/tail, CRC32 validation | [`aetherless-core/src/shm/ring_buffer.rs`](aetherless-core/src/shm/ring_buffer.rs) |
 | **Explicit Error Types** | No `Box<dyn Error>`—all errors are typed enums for exhaustive handling | [`aetherless-core/src/error.rs`](aetherless-core/src/error.rs) |
 | **State Machine** | Compile-time checked FSM transitions via `matches!` patterns | [`aetherless-core/src/state.rs`](aetherless-core/src/state.rs) |
+| **State Machine** | Compile-time checked FSM transitions via `matches!` patterns | [`aetherless-core/src/state.rs`](aetherless-core/src/state.rs) |
 | **Handler Protocol** | Unix socket handshake ensures handlers are ready before routing traffic | [`aetherless-cli/src/commands/up.rs`](aetherless-cli/src/commands/up.rs) |
+| **Autoscaler** | Dynamic horizontal scaling based on request load | [`aetherless-core/src/autoscaler.rs`](aetherless-core/src/autoscaler.rs) |
+| **Cluster/Gossip** | UDP-based node discovery and state syncing | [`aetherless-core/src/cluster.rs`](aetherless-core/src/cluster.rs) |
 
 ---
 
@@ -149,6 +152,8 @@ ML inference, image processing, data transformation—any pipeline where you cha
 | **eBPF/XDP Network Layer** | Kernel-bypass packet routing with microsecond latency |
 | **CRIU Warm Pools** | Process snapshots restore in under 15ms |
 | **Zero-Copy Shared Memory** | Lock-free IPC with CRC32 validation |
+| **Autoscaling** | HPA-like horizontal scaling based on load metrics |
+| **Distributed State** | Gossip-based cluster management for multi-node deployments |
 | **Language Agnostic** | Python, Node, Rust, Go—any process with a TCP port |
 | **Single Binary** | One Rust binary, no container runtime required |
 

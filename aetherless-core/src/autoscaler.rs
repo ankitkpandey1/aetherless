@@ -65,7 +65,7 @@ mod tests {
 
         // 1 replica, 20 reqs -> should scale to 2
         assert_eq!(scaler.calculate_replicas(1, 20.0), 2);
-        
+
         // 1 replica, 15 reqs -> should scale to 2 (1.5 ceil)
         assert_eq!(scaler.calculate_replicas(1, 15.0), 2);
     }
@@ -80,13 +80,13 @@ mod tests {
 
         // 5 total reqs, target 10 -> need 1 replica
         assert_eq!(scaler.calculate_replicas(2, 5.0), 1);
-        
+
         // 0 total reqs -> min replicas (1)
         assert_eq!(scaler.calculate_replicas(5, 0.0), 1);
-        
+
         // 100 reqs, max 10, target 10 -> 10 replicas
         assert_eq!(scaler.calculate_replicas(5, 100.0), 10);
-        
+
         // 200 reqs, max 10 -> capped at 10
         assert_eq!(scaler.calculate_replicas(5, 200.0), 10);
     }

@@ -17,8 +17,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use aetherless_core::{ConfigLoader, FunctionConfig, FunctionRegistry, FunctionState};
 use aetherless_core::autoscaler::{Autoscaler, ScalingPolicy};
+use aetherless_core::{ConfigLoader, FunctionConfig, FunctionRegistry, FunctionState};
 
 use crate::warm_pool::WarmPoolManager;
 
@@ -89,7 +89,7 @@ pub async fn execute(
     // Initialize Autoscaler
     let autoscaler = Autoscaler::new(ScalingPolicy {
         min_replicas: 1,
-        max_replicas: 5,         // Hardcoded limit for safety
+        max_replicas: 5,          // Hardcoded limit for safety
         target_concurrency: 10.0, // Arbitrary unit of "load"
         ..Default::default()
     });
@@ -123,9 +123,9 @@ pub async fn execute(
         match spawn_handler_with_socket(func_config, &socket_dir, &instance_id).await {
             Ok((child, pid)) => {
                 println!("  ✓ {} started (PID: {})", func_config.id, pid);
-                
+
                 // For initial spawn, we assume it's "Cold" unless restored (not handled perfectly here yet)
-                 if warm_pool.is_enabled() {
+                if warm_pool.is_enabled() {
                     match warm_pool.create_snapshot(&func_config.id, pid).await {
                         Ok(()) => {
                             println!("  ✓ {} snapshot created", func_config.id);
@@ -138,15 +138,22 @@ pub async fn execute(
                     }
                 } else {
                     registry.transition(&func_config.id, FunctionState::Running)?;
-                    crate::metrics::COLD_STARTS.with_label_values(&[func_config.id.as_str()]).inc();
+                    crate::metrics::COLD_STARTS
+                        .with_label_values(&[func_config.id.as_str()])
+                        .inc();
                 }
 
-                processes.lock().await.entry(func_config.id.to_string()).or_default().push(RunningProcess {
-                    child,
-                    config: func_config.clone(),
-                    pid,
-                    instance_id,
-                });
+                processes
+                    .lock()
+                    .await
+                    .entry(func_config.id.to_string())
+                    .or_default()
+                    .push(RunningProcess {
+                        child,
+                        config: func_config.clone(),
+                        pid,
+                        instance_id,
+                    });
             }
             Err(e) => {
                 println!("  ✗ Failed to start {}: {}", func_config.id, e);
@@ -162,7 +169,7 @@ pub async fn execute(
     // Setup stats loop
     let processes_stats = processes.clone();
     let registry_stats = registry.clone();
-    let warm_pool_stats = Arc::new(tokio::sync::Mutex::new(warm_pool)); 
+    let warm_pool_stats = Arc::new(tokio::sync::Mutex::new(warm_pool));
 
     // Background stats writer
     tokio::spawn(async move {
@@ -172,27 +179,30 @@ pub async fn execute(
             for list in procs.values() {
                 total_active += list.len();
             }
-            
+
             let mut stats = aetherless_core::stats::AetherlessStats {
                 active_instances: total_active,
                 ..Default::default()
             };
-            
+
             let wp = warm_pool_stats.lock().await;
             stats.warm_pool_active = wp.is_enabled();
-            
+
             for (id, state, config) in registry_stats.snapshot() {
-                 stats.functions.insert(id.clone(), aetherless_core::stats::FunctionStatus {
-                     id: id.clone(),
-                     state,
-                     pid: None,
-                     port: config.trigger_port.value(),
-                     memory_mb: config.memory_limit.megabytes(),
-                     restore_count: 0,
-                     last_restore_ms: None
-                 });
+                stats.functions.insert(
+                    id.clone(),
+                    aetherless_core::stats::FunctionStatus {
+                        id: id.clone(),
+                        state,
+                        pid: None,
+                        port: config.trigger_port.value(),
+                        memory_mb: config.memory_limit.megabytes(),
+                        restore_count: 0,
+                        last_restore_ms: None,
+                    },
+                );
             }
-            
+
             if let Ok(json) = serde_json::to_string(&stats) {
                 let _ = std::fs::write("/dev/shm/aetherless-stats.json", json);
             }
@@ -202,9 +212,9 @@ pub async fn execute(
 
     if foreground {
         println!("Press Ctrl+C to stop...");
-        
+
         let mut interval = tokio::time::interval(Duration::from_secs(2));
-        
+
         // Main loop
         loop {
             tokio::select! {
@@ -219,21 +229,21 @@ pub async fn execute(
                         .trim()
                         .parse()
                         .unwrap_or(0.0);
-                    
+
                     if load > 0.0 {
                         let mut procs_lock = processes.lock().await;
                         // Clone keys to iterate without borrowing lock
                         let func_ids: Vec<String> = procs_lock.keys().cloned().collect();
-                        
+
                         for fid in func_ids {
                             if let Some(instances) = procs_lock.get_mut(&fid) {
                                 let current_count = instances.len();
                                 let desired = autoscaler.calculate_replicas(current_count, load);
-                                
+
                                 if desired > current_count {
                                     let needed = desired - current_count;
                                     tracing::info!("Scaling UP {}: {} -> {} (Load: {})", fid, current_count, desired, load);
-                                    
+
                                     if let Some(first) = instances.first() {
                                         let config = first.config.clone();
                                         // Spawn new instances
@@ -267,7 +277,7 @@ pub async fn execute(
 
         println!();
         println!("Shutting down...");
-        
+
         // Kill all
         let mut procs = processes.lock().await;
         for (id, list) in procs.iter_mut() {
@@ -277,7 +287,7 @@ pub async fn execute(
             }
             println!("  Stopped {} instances for {}", list.len(), id);
         }
-        
+
         let _ = std::fs::remove_dir_all(&socket_dir);
         println!("Orchestrator stopped.");
     }
@@ -396,7 +406,7 @@ async fn spawn_handler_with_socket(
         )
         .into());
     }
-    
+
     // Clean up socket file
     let _ = std::fs::remove_file(&socket_path);
 

@@ -135,9 +135,11 @@ aetherless-core/
 │   ├── region.rs     → POSIX shm_open/mmap wrapper
 │   ├── ring_buffer.rs → Lock-free SPSC ring buffer
 │   └── validator.rs   → CRC32 payload validation
-└── criu/
-    ├── snapshot.rs    → Snapshot creation/restore
-    └── process.rs     → Process lifecycle helpers
+├── criu/
+│   ├── snapshot.rs    → Snapshot creation/restore
+│   └── process.rs     → Process lifecycle helpers
+├── autoscaler.rs      → HPA scaling logic
+└── cluster.rs         → Gossip protocol & node discovery
 ```
 
 ---

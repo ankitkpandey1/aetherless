@@ -7,7 +7,8 @@ set -e
 # 2. Clippy Linting
 # 3. Unit Tests
 # 4. E2E Verification
-# 5. Coverage Report (if available)
+# 5. Autoscaling Verification
+# 6. Coverage Report (if available)
 
 GREEN='\033[0;32m'
 NC='\033[0m'
@@ -24,7 +25,14 @@ cargo test --workspace
 echo -e "${GREEN}== 4. Running E2E Verification ==${NC}"
 ./scripts/verify_e2e.sh
 
-echo -e "${GREEN}== 5. Code Coverage ==${NC}"
+echo -e "${GREEN}== 5. Verifying Autoscaling ==${NC}"
+if [ -f "./scripts/verify_scaling.sh" ]; then
+    ./scripts/verify_scaling.sh || { echo "⚠ Autoscaling verification failed"; exit 1; }
+else
+    echo "⚠ scripts/verify_scaling.sh not found"
+fi
+
+echo -e "${GREEN}== 6. Code Coverage ==${NC}"
 if command -v cargo-tarpaulin &> /dev/null; then
     echo "Running tarpaulin..."
     # Exclude E2E test files and main binaries from coverage if needed, but we want generally everything

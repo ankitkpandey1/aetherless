@@ -47,7 +47,7 @@ impl ClusterManager {
     pub async fn new(bind_addr: &str, node_id: &str) -> Result<Self, std::io::Error> {
         let socket = UdpSocket::bind(bind_addr).await?;
         socket.set_broadcast(true)?; // Enable if needed, but mostly we unicast to known peers
-        
+
         Ok(Self {
             node_id: node_id.to_string(),
             bind_addr: bind_addr.to_string(),
@@ -59,13 +59,17 @@ impl ClusterManager {
     /// Start the gossip loop
     pub async fn start(self: Arc<Self>, seeds: Vec<String>) {
         tracing::info!("Starting cluster manager on {}", self.bind_addr);
-        
+
         // Seed logic: Send Hello to seeds
         for seed in seeds {
-             self.send_to(GossipMessage::Hello {
-                 node_id: self.node_id.clone(),
-                 rpc_addr: self.bind_addr.clone(), // Simplified: use same addr for now
-             }, &seed).await;
+            self.send_to(
+                GossipMessage::Hello {
+                    node_id: self.node_id.clone(),
+                    rpc_addr: self.bind_addr.clone(), // Simplified: use same addr for now
+                },
+                &seed,
+            )
+            .await;
         }
 
         let listener = self.clone();
@@ -100,11 +104,14 @@ impl ClusterManager {
         match msg {
             GossipMessage::Hello { node_id, rpc_addr } => {
                 tracing::info!("Node joined: {} ({})", node_id, rpc_addr);
-                peers.insert(node_id, PeerNode {
-                    id: String::new(), // set below
-                    rpc_addr, // Should validate
-                    last_seen: now,
-                });
+                peers.insert(
+                    node_id,
+                    PeerNode {
+                        id: String::new(), // set below
+                        rpc_addr,          // Should validate
+                        last_seen: now,
+                    },
+                );
                 // Send ack or Hello back?
             }
             GossipMessage::Heartbeat { node_id, .. } => {
@@ -123,7 +130,7 @@ impl ClusterManager {
         let mut interval = tokio::time::interval(Duration::from_secs(1));
         loop {
             interval.tick().await;
-            
+
             // Send heartbeat to all peers (or random subset)
             // Need peer list
             let targets: Vec<String> = {
@@ -148,7 +155,30 @@ impl ClusterManager {
 
     async fn send_to(&self, msg: GossipMessage, addr: &str) {
         if let Ok(data) = serde_json::to_vec(&msg) {
-             let _ = self.socket.send_to(&data, addr).await;
+            let _ = self.socket.send_to(&data, addr).await;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gossip_message_serialization() {
+        let msg = GossipMessage::Hello {
+            node_id: "node-1".to_string(),
+            rpc_addr: "127.0.0.1:8080".to_string(),
+        };
+
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(json.contains("Hello"));
+        assert!(json.contains("node-1"));
+
+        let deserialized: GossipMessage = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            GossipMessage::Hello { node_id, .. } => assert_eq!(node_id, "node-1"),
+            _ => panic!("Wrong message type"),
         }
     }
 }
