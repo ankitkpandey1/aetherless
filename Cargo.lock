@@ -37,6 +37,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -48,6 +49,7 @@ dependencies = [
  "libc",
  "nix",
  "serde",
+ "serde_json",
  "serde_yaml",
  "tempfile",
  "thiserror 2.0.17",

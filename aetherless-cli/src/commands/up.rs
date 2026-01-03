@@ -5,6 +5,7 @@
 //!
 //! Spawns handler processes, creates Unix sockets, and waits for READY signals.
 //! With --warm-pool, creates CRIU snapshots for sub-15ms cold starts.
+//! With --autoscaler, dynamically scales function instances based on load.
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -14,8 +15,10 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
+use uuid::Uuid;
 
 use aetherless_core::{ConfigLoader, FunctionConfig, FunctionRegistry, FunctionState};
+use aetherless_core::autoscaler::{Autoscaler, ScalingPolicy};
 
 use crate::warm_pool::WarmPoolManager;
 
@@ -27,20 +30,9 @@ struct RunningProcess {
     child: Child,
     config: FunctionConfig,
     pid: u32,
+    instance_id: String,
 }
 
-/// Execute the `up` command.
-///
-/// This is the main entry point for the orchestrator runtime.
-///
-/// # Arguments
-/// * `config_path` - Path to the YAML configuration file.
-/// * `foreground` - If true, run blocking in foreground.
-/// * `warm_pool_enabled` - If true, enable CRIU snapshotting.
-///
-/// # Errors
-/// Returns an error if configuration is invalid, socket binding fails,
-/// or handler processes cannot be spawned.
 pub async fn execute(
     config_path: &str,
     foreground: bool,
@@ -89,19 +81,34 @@ pub async fn execute(
         WarmPoolManager::disabled()
     };
 
-    // Track running processes
-    let processes: Arc<Mutex<HashMap<String, RunningProcess>>> =
+    // Track running processes: Map<FunctionId, Vec<RunningProcess>>
+    // We wrap it in Arc<Mutex> to share with stats tasks/main loop
+    let processes: Arc<Mutex<HashMap<String, Vec<RunningProcess>>>> =
         Arc::new(Mutex::new(HashMap::new()));
+
+    // Initialize Autoscaler
+    let autoscaler = Autoscaler::new(ScalingPolicy {
+        min_replicas: 1,
+        max_replicas: 5,         // Hardcoded limit for safety
+        target_concurrency: 10.0, // Arbitrary unit of "load"
+        ..Default::default()
+    });
 
     println!("╔══════════════════════════════════════════════════════════════╗");
     println!("║              AETHERLESS ORCHESTRATOR                         ║");
     if warm_pool.is_enabled() {
         println!("║              [WARM POOL ENABLED]                             ║");
     }
+    println!("║              [AUTOSCALER ENABLED]                            ║");
     println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
 
-    // Spawn all function handlers
+    // Helper to spawn a single instance
+    // Note: This closure captures variables so we can't easily put it in a separate function without passing args
+    // We define spawn logic here to be reused.
+    // Actually, due to async closure complexity, let's just loop locally.
+
+    // Spawn initial instances (min_replicas = 1)
     for func_config in &config.functions {
         println!("▶ Spawning function: {}", func_config.id);
         registry.register(func_config.clone())?;
@@ -111,16 +118,14 @@ pub async fn execute(
             warm_pool.register(func_config.clone()).await;
         }
 
-        // Spawn the handler process with Unix socket handshake
-        match spawn_handler_with_socket(func_config, &socket_dir).await {
+        // Spawn one instance initially
+        let instance_id = Uuid::new_v4().to_string();
+        match spawn_handler_with_socket(func_config, &socket_dir, &instance_id).await {
             Ok((child, pid)) => {
-                println!(
-                    "  ✓ {} started (PID: {}, Port: {})",
-                    func_config.id, pid, func_config.trigger_port
-                );
-
-                // Create CRIU snapshot if warm pool enabled
-                if warm_pool.is_enabled() {
+                println!("  ✓ {} started (PID: {})", func_config.id, pid);
+                
+                // For initial spawn, we assume it's "Cold" unless restored (not handled perfectly here yet)
+                 if warm_pool.is_enabled() {
                     match warm_pool.create_snapshot(&func_config.id, pid).await {
                         Ok(()) => {
                             println!("  ✓ {} snapshot created", func_config.id);
@@ -132,144 +137,148 @@ pub async fn execute(
                         }
                     }
                 } else {
-                    // Update state to Running
                     registry.transition(&func_config.id, FunctionState::Running)?;
-
-                    // Track cold start
-                    crate::metrics::COLD_STARTS
-                        .with_label_values(&[func_config.id.as_str()])
-                        .inc();
+                    crate::metrics::COLD_STARTS.with_label_values(&[func_config.id.as_str()]).inc();
                 }
 
-                // Track the process
-                processes.lock().await.insert(
-                    func_config.id.to_string(),
-                    RunningProcess {
-                        child,
-                        config: func_config.clone(),
-                        pid,
-                    },
-                );
+                processes.lock().await.entry(func_config.id.to_string()).or_default().push(RunningProcess {
+                    child,
+                    config: func_config.clone(),
+                    pid,
+                    instance_id,
+                });
             }
             Err(e) => {
-                println!("  ✗ {} failed: {}", func_config.id, e);
-                tracing::error!(
-                    function_id = %func_config.id,
-                    error = %e,
-                    "Failed to spawn handler"
-                );
+                println!("  ✗ Failed to start {}: {}", func_config.id, e);
+                // Fail hard on initial spawn?
+                // return Err(e);
             }
         }
     }
-
-    let running_count = processes.lock().await.len();
-
-    println!();
-    println!("╔══════════════════════════════════════════════════════════════╗");
-    println!(
-        "║ Status: {} functions running                                 ║",
-        running_count
-    );
-    println!("╠══════════════════════════════════════════════════════════════╣");
-
-    for func_config in &config.functions {
-        let state = registry
-            .get_state(&func_config.id)
-            .unwrap_or(FunctionState::Uninitialized);
-        let status_icon = if state == FunctionState::Running {
-            "●"
-        } else {
-            "○"
-        };
-        println!(
-            "║ {} {:<20} → http://localhost:{:<5} [{:?}]",
-            status_icon,
-            func_config.id.as_str(),
-            func_config.trigger_port.value(),
-            state
-        );
-    }
-
-    println!("╚══════════════════════════════════════════════════════════════╝");
 
     // Start metrics server
     crate::metrics::start_metrics_server(9090);
 
-    // Start stats writer background task
-    let warm_pool = Arc::new(tokio::sync::Mutex::new(warm_pool));
+    // Setup stats loop
+    let processes_stats = processes.clone();
+    let registry_stats = registry.clone();
+    let warm_pool_stats = Arc::new(tokio::sync::Mutex::new(warm_pool)); 
 
-    {
-        let warm_pool = warm_pool.clone();
-        let registry = registry.clone();
-        let processes = processes.clone();
-
-        tokio::spawn(async move {
-            loop {
-                // Collect stats
-                let mut stats = aetherless_core::stats::AetherlessStats {
-                    active_instances: processes.lock().await.len(),
-                    ..Default::default()
-                };
-
-                // Warm pool stats
-                let wp = warm_pool.lock().await;
-                stats.warm_pool_active = wp.is_enabled();
-                // (Could add detailed warm pool stats here if exposed in stats module)
-
-                // Function status
-                for (id, state, config) in registry.snapshot() {
-                    let memory = config.memory_limit.megabytes();
-
-                    stats.functions.insert(
-                        id.clone(),
-                        aetherless_core::stats::FunctionStatus {
-                            id,
-                            state,
-                            pid: None, // Could lookup in processes map
-                            port: config.trigger_port.value(),
-                            memory_mb: memory,
-                            restore_count: 0,
-                            last_restore_ms: None,
-                        },
-                    );
-                }
-
-                // Write to SHM file for TUI
-                // atomic write: write to temp file then rename
-                if let Ok(json) = serde_json::to_string(&stats) {
-                    let _ = std::fs::write("/dev/shm/aetherless-stats.json", json);
-                }
-
-                tokio::time::sleep(Duration::from_millis(100)).await;
+    // Background stats writer
+    tokio::spawn(async move {
+        loop {
+            let procs = processes_stats.lock().await;
+            let mut total_active = 0;
+            for list in procs.values() {
+                total_active += list.len();
             }
-        });
-    }
+            
+            let mut stats = aetherless_core::stats::AetherlessStats {
+                active_instances: total_active,
+                ..Default::default()
+            };
+            
+            let wp = warm_pool_stats.lock().await;
+            stats.warm_pool_active = wp.is_enabled();
+            
+            for (id, state, config) in registry_stats.snapshot() {
+                 stats.functions.insert(id.clone(), aetherless_core::stats::FunctionStatus {
+                     id: id.clone(),
+                     state,
+                     pid: None,
+                     port: config.trigger_port.value(),
+                     memory_mb: config.memory_limit.megabytes(),
+                     restore_count: 0,
+                     last_restore_ms: None
+                 });
+            }
+            
+            if let Ok(json) = serde_json::to_string(&stats) {
+                let _ = std::fs::write("/dev/shm/aetherless-stats.json", json);
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    });
 
     if foreground {
-        println!();
         println!("Press Ctrl+C to stop...");
-        println!();
-
-        // Wait for shutdown signal
-        tokio::signal::ctrl_c().await?;
+        
+        let mut interval = tokio::time::interval(Duration::from_secs(2));
+        
+        // Main loop
+        loop {
+            tokio::select! {
+                _ = tokio::signal::ctrl_c() => {
+                    break;
+                }
+                _ = interval.tick() => {
+                    // Autoscaler Logic
+                    // 1. Read simulated load from file
+                    let load: f64 = std::fs::read_to_string("/tmp/aetherless-load")
+                        .unwrap_or_default()
+                        .trim()
+                        .parse()
+                        .unwrap_or(0.0);
+                    
+                    if load > 0.0 {
+                        let mut procs_lock = processes.lock().await;
+                        // Clone keys to iterate without borrowing lock
+                        let func_ids: Vec<String> = procs_lock.keys().cloned().collect();
+                        
+                        for fid in func_ids {
+                            if let Some(instances) = procs_lock.get_mut(&fid) {
+                                let current_count = instances.len();
+                                let desired = autoscaler.calculate_replicas(current_count, load);
+                                
+                                if desired > current_count {
+                                    let needed = desired - current_count;
+                                    tracing::info!("Scaling UP {}: {} -> {} (Load: {})", fid, current_count, desired, load);
+                                    
+                                    if let Some(first) = instances.first() {
+                                        let config = first.config.clone();
+                                        // Spawn new instances
+                                        for _ in 0..needed {
+                                             let instance_id = Uuid::new_v4().to_string();
+                                             match spawn_handler_with_socket(&config, &socket_dir, &instance_id).await {
+                                                 Ok((child, pid)) => {
+                                                     instances.push(RunningProcess {
+                                                         child, config: config.clone(), pid, instance_id
+                                                     });
+                                                 },
+                                                 Err(e) => tracing::error!("Scale up failed: {}", e)
+                                             }
+                                        }
+                                    }
+                                } else if desired < current_count {
+                                    let remove_count = current_count - desired;
+                                    tracing::info!("Scaling DOWN {}: {} -> {} (Load: {})", fid, current_count, desired, load);
+                                    for _ in 0..remove_count {
+                                        if let Some(mut proc) = instances.pop() {
+                                            let _ = proc.child.kill();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         println!();
         println!("Shutting down...");
-        tracing::info!("Shutting down orchestrator");
-
-        // Kill all child processes
+        
+        // Kill all
         let mut procs = processes.lock().await;
-        for (id, mut proc) in procs.drain() {
-            print!("  Stopping {}... ", id);
-            let _ = proc.child.kill();
-            let _ = proc.child.wait();
-            println!("done");
+        for (id, list) in procs.iter_mut() {
+            for proc in list.iter_mut() {
+                let _ = proc.child.kill();
+                let _ = proc.child.wait();
+            }
+            println!("  Stopped {} instances for {}", list.len(), id);
         }
-
-        // Cleanup socket directory
+        
         let _ = std::fs::remove_dir_all(&socket_dir);
-
-        println!();
         println!("Orchestrator stopped.");
     }
 
@@ -280,9 +289,11 @@ pub async fn execute(
 async fn spawn_handler_with_socket(
     config: &FunctionConfig,
     socket_dir: &Path,
+    instance_id: &str,
 ) -> Result<(Child, u32), Box<dyn std::error::Error>> {
     let handler_path = config.handler_path.as_path();
-    let socket_path = socket_dir.join(format!("{}.sock", config.id));
+    // Unique socket path per instance
+    let socket_path = socket_dir.join(format!("{}-{}.sock", config.id, instance_id));
 
     // Remove old socket if exists
     let _ = std::fs::remove_file(&socket_path);
@@ -315,11 +326,13 @@ async fn spawn_handler_with_socket(
         "AETHER_TRIGGER_PORT".to_string(),
         config.trigger_port.value().to_string(),
     );
+    env_vars.insert("AETHER_INSTANCE_ID".to_string(), instance_id.to_string());
 
     tracing::debug!(
         program = %program,
         handler = %handler_path.display(),
         socket = %socket_path.display(),
+        instance = %instance_id,
         "Spawning handler"
     );
 
@@ -357,12 +370,6 @@ async fn spawn_handler_with_socket(
                     Ok(n) if n >= 5 => {
                         if &buf[..5] == b"READY" {
                             ready_received = true;
-                            tracing::info!(
-                                function_id = %config.id,
-                                pid = pid,
-                                elapsed_ms = start.elapsed().as_millis(),
-                                "Handler sent READY signal"
-                            );
                             break;
                         }
                     }
@@ -374,13 +381,13 @@ async fn spawn_handler_with_socket(
                 tokio::time::sleep(Duration::from_millis(50)).await;
             }
             Err(e) => {
+                let _ = child; // drop handle
                 return Err(format!("Socket accept error: {}", e).into());
             }
         }
     }
 
     if !ready_received {
-        // Kill the process if it didn't send READY
         let mut child = child;
         let _ = child.kill();
         return Err(format!(
@@ -389,6 +396,9 @@ async fn spawn_handler_with_socket(
         )
         .into());
     }
+    
+    // Clean up socket file
+    let _ = std::fs::remove_file(&socket_path);
 
     Ok((child, pid))
 }

@@ -7,6 +7,8 @@
 //! Provides function registry, state machine, configuration parsing,
 //! shared memory IPC, and CRIU lifecycle management.
 
+pub mod autoscaler;
+pub mod cluster;
 pub mod config;
 pub mod criu;
 pub mod error;
