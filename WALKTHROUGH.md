@@ -951,3 +951,39 @@ loop {
     }
 }
 ```
+
+---
+
+## HTTP Gateway (Ingress) (Phase 11)
+
+The Gateway acts as a reverse proxy, routing incoming HTTP requests to the appropriate function instance.
+
+### Source: [aetherless-cli/src/gateway.rs](aetherless-cli/src/gateway.rs)
+
+It uses `axum` for high-performance async handling and `reqwest` for proxying.
+
+```rust
+// Routing logic
+let app = Router::new()
+    .route("/function/{function_id}/{*path}", any(proxy_handler))
+    .route("/storage/{key}", get(storage_get).put(storage_put));
+```
+
+---
+
+## Distributed Storage & Security (Phases 12 & 13)
+
+### Key-Value Store
+A simple in-memory key-value store (`aetherless-core/src/storage.rs`) is provided for functions to share ephemeral state. Updates are gossiped across the cluster using `StorageUpdate` messages.
+
+### Security (HMAC)
+Gossip messages are signed with HMAC-SHA256 using a shared secret to prevent unauthorized state injection.
+
+```rust
+// Verifying a message in cluster.rs
+if signed.verify(&self.secret_key) {
+    self.handle_message(signed.payload, addr).await;
+} else {
+    tracing::warn!("Invalid signature");
+}
+```

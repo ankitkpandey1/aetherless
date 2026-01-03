@@ -11,6 +11,7 @@ mod commands;
 mod metrics;
 mod tui;
 mod warm_pool;
+pub mod gateway;
 
 pub use warm_pool::WarmPoolManager;
 

@@ -74,6 +74,7 @@ pub async fn execute(
             }
             Err(e) => {
                 println!("⚠ Warm pool unavailable: {} (continuing without)", e);
+                println!("  (Hint: Warm pools require CRIU. Try 'sudo apt install criu' and running as root)");
                 WarmPoolManager::disabled()
             }
         }
@@ -163,10 +164,45 @@ pub async fn execute(
         }
     }
 
+    // Initialize Storage (Phase 12)
+    let storage = aetherless_core::storage::Storage::new();
+
+    // Initialize Cluster Manager (Phase 10 & 13)
+    let cluster_port = 7000;
+    let cluster_addr = format!("0.0.0.0:{}", cluster_port);
+    let node_id = Uuid::new_v4().to_string(); 
+    
+    // Load shared secret from environment for Phase 13 Security
+    let secret = std::env::var("AETHER_CLUSTER_SECRET").ok();
+
+    match aetherless_core::cluster::ClusterManager::new(&cluster_addr, &node_id, storage.clone(), secret).await {
+        Ok(cm) => {
+            let cm_arc = Arc::new(cm);
+            let seeds: Vec<String> = vec![]; 
+            Arc::clone(&cm_arc).start(seeds).await;
+            tracing::info!("Cluster manager started on {}", cluster_addr);
+        }
+        Err(e) => {
+             // Usability Hint
+            tracing::warn!("Failed to start cluster manager on {}: {}", cluster_addr, e);
+            println!("⚠ Distributed features disabled. Is port {} available?", cluster_port);
+        }
+    }
+
     // Start metrics server
     crate::metrics::start_metrics_server(9090);
 
+    // Start HTTP Gateway (Phase 11) using Storage
+    let registry_gw = registry.clone();
+    let storage_gw = storage.clone();
+    tokio::spawn(async move {
+        if let Err(e) = crate::gateway::start_gateway(8000, registry_gw, storage_gw).await {
+            tracing::error!("Gateway server failed: {}", e);
+        }
+    });
+
     // Setup stats loop
+
     let processes_stats = processes.clone();
     let registry_stats = registry.clone();
     let warm_pool_stats = Arc::new(tokio::sync::Mutex::new(warm_pool));

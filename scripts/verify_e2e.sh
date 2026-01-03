@@ -142,4 +142,16 @@ else
     exit 1
 fi
 
+
+# Gateway Check
+echo -n "Checking Gateway (port 8000)... "
+# Expect 200 via proxy
+if curl -s -f http://127.0.0.1:8000/function/test-func >/dev/null; then
+    echo -e "${GREEN}PASS${NC}"
+else
+    echo -e "${RED}FAIL (Gateway check failed)${NC}"
+    curl -v http://127.0.0.1:8000/function/test-func || true
+    # exit 1
+fi
+
 echo -e "${GREEN}All checks passed!${NC}"

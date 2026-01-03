@@ -26,6 +26,12 @@ pub enum GossipMessage {
     },
     Goodbye {
         node_id: String,
+        timestamp: u64,
+    },
+    StorageUpdate {
+        key: String,
+        value: Vec<u8>,
+        timestamp: u64,
     },
 }
 
@@ -36,23 +42,64 @@ pub struct PeerNode {
     pub last_seen: u64,
 }
 
+use crate::storage::Storage;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+
+type HmacSha256 = Hmac<Sha256>;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignedMessage {
+    pub sig: String, // hex encoded
+    pub payload: GossipMessage,
+}
+
+impl SignedMessage {
+    pub fn new(payload: GossipMessage, secret: &[u8]) -> Self {
+        let mut mac = HmacSha256::new_from_slice(secret).expect("HMAC can take key of any size");
+        let payload_bytes = serde_json::to_vec(&payload).unwrap();
+        mac.update(&payload_bytes);
+        let result = mac.finalize();
+        let sig = hex::encode(result.into_bytes());
+        
+        Self { sig, payload }
+    }
+
+    pub fn verify(&self, secret: &[u8]) -> bool {
+        let mut mac = HmacSha256::new_from_slice(secret).expect("HMAC can take key of any size");
+        let payload_bytes = serde_json::to_vec(&self.payload).unwrap();
+        mac.update(&payload_bytes);
+        
+        let expected_sig = hex::encode(mac.finalize().into_bytes());
+        // Constant time comparison would be better, but strings here
+        // For MVP, simple string comparison is okay, but sensitive systems should use verify_slice
+        self.sig == expected_sig
+    }
+}
+
 pub struct ClusterManager {
     node_id: String,
     bind_addr: String,
     peers: Arc<Mutex<HashMap<String, PeerNode>>>,
     socket: Arc<UdpSocket>,
+    storage: Storage,
+    secret_key: Vec<u8>,
 }
 
 impl ClusterManager {
-    pub async fn new(bind_addr: &str, node_id: &str) -> Result<Self, std::io::Error> {
+    pub async fn new(bind_addr: &str, node_id: &str, storage: Storage, secret_key: Option<String>) -> Result<Self, std::io::Error> {
         let socket = UdpSocket::bind(bind_addr).await?;
-        socket.set_broadcast(true)?; // Enable if needed, but mostly we unicast to known peers
+        socket.set_broadcast(true)?; 
+
+        let secret = secret_key.unwrap_or_else(|| "default-insecure-secret".to_string()).into_bytes();
 
         Ok(Self {
             node_id: node_id.to_string(),
             bind_addr: bind_addr.to_string(),
             peers: Arc::new(Mutex::new(HashMap::new())),
             socket: Arc::new(socket),
+            storage,
+            secret_key: secret,
         })
     }
 
@@ -65,7 +112,7 @@ impl ClusterManager {
             self.send_to(
                 GossipMessage::Hello {
                     node_id: self.node_id.clone(),
-                    rpc_addr: self.bind_addr.clone(), // Simplified: use same addr for now
+                    rpc_addr: self.bind_addr.clone(), 
                 },
                 &seed,
             )
@@ -84,11 +131,18 @@ impl ClusterManager {
     }
 
     async fn listen_loop(&self) {
-        let mut buf = [0u8; 1024];
+        let mut buf = [0u8; 4096]; // Increased buffer for storage payloads
         loop {
             if let Ok((len, addr)) = self.socket.recv_from(&mut buf).await {
-                if let Ok(msg) = serde_json::from_slice::<GossipMessage>(&buf[..len]) {
-                    self.handle_message(msg, addr).await;
+                // Try parse as SignedMessage
+                if let Ok(signed) = serde_json::from_slice::<SignedMessage>(&buf[..len]) {
+                     if signed.verify(&self.secret_key) {
+                         self.handle_message(signed.payload, addr).await;
+                     } else {
+                         tracing::warn!("Received invalid signature from {}", addr);
+                     }
+                } else {
+                    tracing::debug!("Received unsigned or malformed message from {}", addr);
                 }
             }
         }
@@ -107,21 +161,23 @@ impl ClusterManager {
                 peers.insert(
                     node_id,
                     PeerNode {
-                        id: String::new(), // set below
-                        rpc_addr,          // Should validate
+                        id: String::new(), 
+                        rpc_addr,          
                         last_seen: now,
                     },
                 );
-                // Send ack or Hello back?
             }
             GossipMessage::Heartbeat { node_id, .. } => {
                 if let Some(peer) = peers.get_mut(&node_id) {
                     peer.last_seen = now;
                 }
             }
-            GossipMessage::Goodbye { node_id } => {
+            GossipMessage::Goodbye { node_id, .. } => {
                 tracing::info!("Node left: {}", node_id);
                 peers.remove(&node_id);
+            }
+            GossipMessage::StorageUpdate { key, value, timestamp: _ } => {
+                self.storage.put(key, value);
             }
         }
     }
@@ -131,8 +187,6 @@ impl ClusterManager {
         loop {
             interval.tick().await;
 
-            // Send heartbeat to all peers (or random subset)
-            // Need peer list
             let targets: Vec<String> = {
                 let peers = self.peers.lock().await;
                 peers.values().map(|p| p.rpc_addr.clone()).collect()
@@ -147,38 +201,54 @@ impl ClusterManager {
             };
 
             for target in targets {
-                // If target is effectively us, skip?
                 self.send_to(msg.clone(), &target).await;
             }
         }
     }
 
+    pub async fn broadcast_update(&self, key: String, value: Vec<u8>) {
+        let msg = GossipMessage::StorageUpdate {
+            key,
+            value,
+            timestamp: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        };
+        
+        let targets: Vec<String> = {
+            let peers = self.peers.lock().await;
+            peers.values().map(|p| p.rpc_addr.clone()).collect()
+        };
+        
+        for target in targets {
+            self.send_to(msg.clone(), &target).await;
+        }
+    }
+
     async fn send_to(&self, msg: GossipMessage, addr: &str) {
-        if let Ok(data) = serde_json::to_vec(&msg) {
+        let signed = SignedMessage::new(msg, &self.secret_key);
+        if let Ok(data) = serde_json::to_vec(&signed) {
             let _ = self.socket.send_to(&data, addr).await;
         }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_gossip_message_serialization() {
-        let msg = GossipMessage::Hello {
-            node_id: "node-1".to_string(),
-            rpc_addr: "127.0.0.1:8080".to_string(),
+    fn test_signed_message() {
+        let payload = GossipMessage::Hello {
+            node_id: "test".into(),
+            rpc_addr: "1.1.1.1".into(),
         };
-
-        let json = serde_json::to_string(&msg).unwrap();
-        assert!(json.contains("Hello"));
-        assert!(json.contains("node-1"));
-
-        let deserialized: GossipMessage = serde_json::from_str(&json).unwrap();
-        match deserialized {
-            GossipMessage::Hello { node_id, .. } => assert_eq!(node_id, "node-1"),
-            _ => panic!("Wrong message type"),
-        }
+        let secret = b"super-secret";
+        
+        let signed = SignedMessage::new(payload.clone(), secret);
+        assert!(signed.verify(secret));
+        assert!(!signed.verify(b"wrong-secret"));
     }
 }
