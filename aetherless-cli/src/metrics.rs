@@ -93,6 +93,9 @@ mod tests {
 
         // Increment a counter so gather() produces output (Prometheus optimization)
         FUNCTION_RESTORES.with_label_values(&["test_func"]).inc();
+        
+        // Also set gauge to ensure it appears
+        WARM_POOL_SIZE.with_label_values(&["test_func"]).set(1);
 
         let output = metrics_handler();
 
