@@ -104,7 +104,11 @@ pub async fn execute(
         println!("║              [WARM POOL ENABLED]                             ║");
     }
     println!("║              [AUTOSCALER ENABLED]                            ║");
-    println!("║              [SMP: {} CPUs, {} NUMA nodes]                    ║", cpu_allocator.num_cpus(), cpu_allocator.num_numa_nodes());
+    println!(
+        "║              [SMP: {} CPUs, {} NUMA nodes]                    ║",
+        cpu_allocator.num_cpus(),
+        cpu_allocator.num_numa_nodes()
+    );
     println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -129,9 +133,15 @@ pub async fn execute(
             Ok((child, pid)) => {
                 // Pin process to CPU for even SMP distribution
                 match cpu_allocator.pin_process(pid) {
-                    Ok(cpu) => println!("  ✓ {} started (PID: {}, CPU: {})", func_config.id, pid, cpu),
+                    Ok(cpu) => println!(
+                        "  ✓ {} started (PID: {}, CPU: {})",
+                        func_config.id, pid, cpu
+                    ),
                     Err(e) => {
-                        println!("  ✓ {} started (PID: {}, CPU affinity failed: {})", func_config.id, pid, e);
+                        println!(
+                            "  ✓ {} started (PID: {}, CPU affinity failed: {})",
+                            func_config.id, pid, e
+                        );
                     }
                 }
 
@@ -180,22 +190,32 @@ pub async fn execute(
     // Initialize Cluster Manager (Phase 10 & 13)
     let cluster_port = 7000;
     let cluster_addr = format!("0.0.0.0:{}", cluster_port);
-    let node_id = Uuid::new_v4().to_string(); 
-    
+    let node_id = Uuid::new_v4().to_string();
+
     // Load shared secret from environment for Phase 13 Security
     let secret = std::env::var("AETHER_CLUSTER_SECRET").ok();
 
-    match aetherless_core::cluster::ClusterManager::new(&cluster_addr, &node_id, storage.clone(), secret).await {
+    match aetherless_core::cluster::ClusterManager::new(
+        &cluster_addr,
+        &node_id,
+        storage.clone(),
+        secret,
+    )
+    .await
+    {
         Ok(cm) => {
             let cm_arc = Arc::new(cm);
-            let seeds: Vec<String> = vec![]; 
+            let seeds: Vec<String> = vec![];
             Arc::clone(&cm_arc).start(seeds).await;
             tracing::info!("Cluster manager started on {}", cluster_addr);
         }
         Err(e) => {
-             // Usability Hint
+            // Usability Hint
             tracing::warn!("Failed to start cluster manager on {}: {}", cluster_addr, e);
-            println!("⚠ Distributed features disabled. Is port {} available?", cluster_port);
+            println!(
+                "⚠ Distributed features disabled. Is port {} available?",
+                cluster_port
+            );
         }
     }
 

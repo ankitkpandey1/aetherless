@@ -987,3 +987,28 @@ if signed.verify(&self.secret_key) {
     tracing::warn!("Invalid signature");
 }
 ```
+
+---
+
+## SMP CPU Affinity (Phase 14)
+
+Aetherless distributes handler processes evenly across all available CPU cores using `sched_setaffinity()`.
+
+### Source: [aetherless-cli/src/cpu_affinity.rs](aetherless-cli/src/cpu_affinity.rs)
+
+### Features:
+- **Round-robin allocation**: Each new handler is pinned to the next CPU in sequence
+- **NUMA awareness**: Detects NUMA topology from `/sys/devices/system/node/` for memory locality
+- **Thread-safe**: Uses atomic counters for concurrent allocations
+
+### Output Example:
+```
+║              [SMP: 16 CPUs, 1 NUMA nodes]                    ║
+▶ Spawning function: my-func
+  ✓ my-func started (PID: 12345, CPU: 0)
+  ✓ my-func started (PID: 12346, CPU: 1)
+  ✓ my-func started (PID: 12347, CPU: 2)
+```
+
+### Verification:
+Use `taskset -p <pid>` to verify each handler is pinned to a specific core.

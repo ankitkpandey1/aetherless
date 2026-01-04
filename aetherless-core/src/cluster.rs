@@ -61,7 +61,7 @@ impl SignedMessage {
         mac.update(&payload_bytes);
         let result = mac.finalize();
         let sig = hex::encode(result.into_bytes());
-        
+
         Self { sig, payload }
     }
 
@@ -69,7 +69,7 @@ impl SignedMessage {
         let mut mac = HmacSha256::new_from_slice(secret).expect("HMAC can take key of any size");
         let payload_bytes = serde_json::to_vec(&self.payload).unwrap();
         mac.update(&payload_bytes);
-        
+
         let expected_sig = hex::encode(mac.finalize().into_bytes());
         // Constant time comparison would be better, but strings here
         // For MVP, simple string comparison is okay, but sensitive systems should use verify_slice
@@ -87,11 +87,18 @@ pub struct ClusterManager {
 }
 
 impl ClusterManager {
-    pub async fn new(bind_addr: &str, node_id: &str, storage: Storage, secret_key: Option<String>) -> Result<Self, std::io::Error> {
+    pub async fn new(
+        bind_addr: &str,
+        node_id: &str,
+        storage: Storage,
+        secret_key: Option<String>,
+    ) -> Result<Self, std::io::Error> {
         let socket = UdpSocket::bind(bind_addr).await?;
-        socket.set_broadcast(true)?; 
+        socket.set_broadcast(true)?;
 
-        let secret = secret_key.unwrap_or_else(|| "default-insecure-secret".to_string()).into_bytes();
+        let secret = secret_key
+            .unwrap_or_else(|| "default-insecure-secret".to_string())
+            .into_bytes();
 
         Ok(Self {
             node_id: node_id.to_string(),
@@ -112,7 +119,7 @@ impl ClusterManager {
             self.send_to(
                 GossipMessage::Hello {
                     node_id: self.node_id.clone(),
-                    rpc_addr: self.bind_addr.clone(), 
+                    rpc_addr: self.bind_addr.clone(),
                 },
                 &seed,
             )
@@ -136,11 +143,11 @@ impl ClusterManager {
             if let Ok((len, addr)) = self.socket.recv_from(&mut buf).await {
                 // Try parse as SignedMessage
                 if let Ok(signed) = serde_json::from_slice::<SignedMessage>(&buf[..len]) {
-                     if signed.verify(&self.secret_key) {
-                         self.handle_message(signed.payload, addr).await;
-                     } else {
-                         tracing::warn!("Received invalid signature from {}", addr);
-                     }
+                    if signed.verify(&self.secret_key) {
+                        self.handle_message(signed.payload, addr).await;
+                    } else {
+                        tracing::warn!("Received invalid signature from {}", addr);
+                    }
                 } else {
                     tracing::debug!("Received unsigned or malformed message from {}", addr);
                 }
@@ -161,8 +168,8 @@ impl ClusterManager {
                 peers.insert(
                     node_id,
                     PeerNode {
-                        id: String::new(), 
-                        rpc_addr,          
+                        id: String::new(),
+                        rpc_addr,
                         last_seen: now,
                     },
                 );
@@ -176,7 +183,11 @@ impl ClusterManager {
                 tracing::info!("Node left: {}", node_id);
                 peers.remove(&node_id);
             }
-            GossipMessage::StorageUpdate { key, value, timestamp: _ } => {
+            GossipMessage::StorageUpdate {
+                key,
+                value,
+                timestamp: _,
+            } => {
                 self.storage.put(key, value);
             }
         }
@@ -215,12 +226,12 @@ impl ClusterManager {
                 .unwrap()
                 .as_secs(),
         };
-        
+
         let targets: Vec<String> = {
             let peers = self.peers.lock().await;
             peers.values().map(|p| p.rpc_addr.clone()).collect()
         };
-        
+
         for target in targets {
             self.send_to(msg.clone(), &target).await;
         }
@@ -234,7 +245,6 @@ impl ClusterManager {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,7 +256,7 @@ mod tests {
             rpc_addr: "1.1.1.1".into(),
         };
         let secret = b"super-secret";
-        
+
         let signed = SignedMessage::new(payload.clone(), secret);
         assert!(signed.verify(secret));
         assert!(!signed.verify(b"wrong-secret"));

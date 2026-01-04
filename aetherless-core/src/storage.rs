@@ -2,7 +2,7 @@
 // Copyright 2025 Ankit Kumar Pandey
 
 //! Ephemeral in-memory key-value storage.
-//! 
+//!
 //! Provides a simple thread-safe storage for functions to share state.
 //! In a real distributed system, this would be backed by a consensus algorithm
 //! or a distributed hash table. For now, it's local to the node, but

@@ -8,11 +8,11 @@
 use clap::{Parser, Subcommand};
 
 mod commands;
+mod cpu_affinity;
+pub mod gateway;
 mod metrics;
 mod tui;
 mod warm_pool;
-mod cpu_affinity;
-pub mod gateway;
 
 pub use warm_pool::WarmPoolManager;
 
