@@ -95,12 +95,16 @@ pub async fn execute(
         ..Default::default()
     });
 
+    // Initialize CPU Allocator for SMP distribution (Phase 14)
+    let cpu_allocator = crate::cpu_affinity::CpuAllocator::new();
+
     println!("╔══════════════════════════════════════════════════════════════╗");
     println!("║              AETHERLESS ORCHESTRATOR                         ║");
     if warm_pool.is_enabled() {
         println!("║              [WARM POOL ENABLED]                             ║");
     }
     println!("║              [AUTOSCALER ENABLED]                            ║");
+    println!("║              [SMP: {} CPUs, {} NUMA nodes]                    ║", cpu_allocator.num_cpus(), cpu_allocator.num_numa_nodes());
     println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -123,7 +127,13 @@ pub async fn execute(
         let instance_id = Uuid::new_v4().to_string();
         match spawn_handler_with_socket(func_config, &socket_dir, &instance_id).await {
             Ok((child, pid)) => {
-                println!("  ✓ {} started (PID: {})", func_config.id, pid);
+                // Pin process to CPU for even SMP distribution
+                match cpu_allocator.pin_process(pid) {
+                    Ok(cpu) => println!("  ✓ {} started (PID: {}, CPU: {})", func_config.id, pid, cpu),
+                    Err(e) => {
+                        println!("  ✓ {} started (PID: {}, CPU affinity failed: {})", func_config.id, pid, e);
+                    }
+                }
 
                 // For initial spawn, we assume it's "Cold" unless restored (not handled perfectly here yet)
                 if warm_pool.is_enabled() {
