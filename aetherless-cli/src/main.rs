@@ -56,6 +56,15 @@ pub enum Commands {
         /// Enable CRIU warm pools for sub-15ms cold starts
         #[arg(long)]
         warm_pool: bool,
+
+        /// Enable XDP/eBPF data plane for kernel-bypass networking
+        /// Requires root privileges and compiled BPF object
+        #[arg(long)]
+        xdp: bool,
+
+        /// Network interface for XDP (default: lo)
+        #[arg(long, default_value = "lo")]
+        xdp_interface: String,
     },
 
     /// Deploy a function configuration.
@@ -110,7 +119,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Up {
             foreground,
             warm_pool,
-        } => commands::up::execute(&cli.config, foreground, warm_pool).await,
+            xdp,
+            xdp_interface,
+        } => commands::up::execute(&cli.config, foreground, warm_pool, xdp, &xdp_interface).await,
         Commands::Deploy { file, force } => commands::deploy::execute(&file, force).await,
         Commands::Stats { dashboard, watch } => commands::stats::execute(watch, dashboard).await,
         Commands::List => commands::list::execute(&cli.config).await,

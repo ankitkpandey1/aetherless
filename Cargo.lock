@@ -25,6 +25,7 @@ name = "aetherless-cli"
 version = "1.0.0"
 dependencies = [
  "aetherless-core",
+ "aetherless-ebpf",
  "axum",
  "clap",
  "crossterm",

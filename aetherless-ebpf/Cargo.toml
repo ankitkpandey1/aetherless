@@ -10,6 +10,10 @@ description = "eBPF data plane for Aetherless serverless platform"
 name = "aetherless-ebpf"
 path = "src/main.rs"
 
+[lib]
+name = "aetherless_ebpf"
+path = "src/lib.rs"
+
 [dependencies]
 tokio = { workspace = true }
 thiserror = { workspace = true }

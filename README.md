@@ -35,6 +35,7 @@
 | **Autoscaler** | Dynamic horizontal scaling based on request load | [`aetherless-core/src/autoscaler.rs`](aetherless-core/src/autoscaler.rs) |
 | **Cluster/Gossip** | UDP-based node discovery and state syncing | [`aetherless-core/src/cluster.rs`](aetherless-core/src/cluster.rs) |
 | **SMP CPU Affinity** | NUMA-aware process pinning for even multi-core distribution | [`aetherless-cli/src/cpu_affinity.rs`](aetherless-cli/src/cpu_affinity.rs) |
+| **XDP Data Plane** | Kernel-bypass networking via eBPF/XDP (`--xdp` flag) | [`aetherless-ebpf/src/lib.rs`](aetherless-ebpf/src/lib.rs) |
 
 ---
 

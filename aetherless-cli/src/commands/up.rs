@@ -37,8 +37,10 @@ pub async fn execute(
     config_path: &str,
     foreground: bool,
     warm_pool_enabled: bool,
+    xdp_enabled: bool,
+    xdp_interface: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    tracing::info!(config = %config_path, foreground = %foreground, warm_pool = %warm_pool_enabled, "Starting orchestrator");
+    tracing::info!(config = %config_path, foreground = %foreground, warm_pool = %warm_pool_enabled, xdp = %xdp_enabled, "Starting orchestrator");
 
     // Load and validate configuration - fail fast on invalid config
     let config = ConfigLoader::load_file(config_path)?;
@@ -109,6 +111,36 @@ pub async fn execute(
         cpu_allocator.num_cpus(),
         cpu_allocator.num_numa_nodes()
     );
+
+    // Initialize XDP manager (Phase 15)
+    let xdp_manager: Option<Arc<tokio::sync::Mutex<aetherless_ebpf::XdpManager>>> = if xdp_enabled {
+        let mut manager = aetherless_ebpf::XdpManager::new(xdp_interface);
+
+        // Try to load XDP program
+        let bpf_path = std::path::Path::new("aetherless-ebpf/xdp_redirect.o");
+        if bpf_path.exists() {
+            match manager.load_program(bpf_path, "xdp_redirect") {
+                Ok(()) => {
+                    println!(
+                        "║              [XDP ENABLED on {}]                         ║",
+                        xdp_interface
+                    );
+                }
+                Err(e) => {
+                    println!("║              [XDP FAILED: {}]                    ║", e);
+                    println!("  (Hint: XDP requires root. Try 'sudo aether up --xdp')");
+                }
+            }
+        } else {
+            println!("║              [XDP: No BPF object found]                      ║");
+            println!("  (Hint: Compile with 'cd aetherless-ebpf && ./build_bpf.sh')");
+        }
+
+        Some(Arc::new(tokio::sync::Mutex::new(manager)))
+    } else {
+        None
+    };
+
     println!("╚══════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -141,6 +173,23 @@ pub async fn execute(
                         println!(
                             "  ✓ {} started (PID: {}, CPU affinity failed: {})",
                             func_config.id, pid, e
+                        );
+                    }
+                }
+
+                // Register port with XDP if enabled (Phase 15)
+                if let Some(ref xdp) = xdp_manager {
+                    let port =
+                        aetherless_core::Port::new(func_config.trigger_port.value()).unwrap();
+                    let process_id = aetherless_core::ProcessId::new(pid).unwrap();
+                    let mut mgr = xdp.lock().await;
+                    if let Err(e) = mgr.register_port(port, process_id, None).await {
+                        println!("  ⚠ XDP port registration failed: {}", e);
+                    } else {
+                        println!(
+                            "  ✓ XDP: port {} -> PID {}",
+                            func_config.trigger_port.value(),
+                            pid
                         );
                     }
                 }

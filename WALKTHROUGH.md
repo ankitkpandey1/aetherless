@@ -1012,3 +1012,33 @@ Aetherless distributes handler processes evenly across all available CPU cores u
 
 ### Verification:
 Use `taskset -p <pid>` to verify each handler is pinned to a specific core.
+
+---
+
+## XDP/eBPF Data Plane (Phase 15)
+
+Aetherless supports kernel-bypass networking using XDP (eXpress Data Path) for ultra-low-latency packet routing.
+
+### Source: [aetherless-ebpf/src/lib.rs](aetherless-ebpf/src/lib.rs)
+
+### Enabling XDP:
+```bash
+# Compile BPF program first
+cd aetherless-ebpf && ./build_bpf.sh
+
+# Start with XDP enabled (requires root)
+sudo aether up --xdp --xdp-interface eth0
+```
+
+### How It Works:
+1. **XdpManager** loads the compiled `xdp_redirect.o` BPF program
+2. Attaches to specified network interface (lo, eth0, etc.)
+3. Registers port→PID mappings in BPF hash map
+4. XDP program intercepts packets at driver level and routes by port
+
+### Output:
+```
+║              [XDP ENABLED on lo]                         ║
+▶ Spawning function: my-func
+  ✓ XDP: port 8081 -> PID 12345
+```

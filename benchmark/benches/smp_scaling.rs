@@ -9,7 +9,7 @@
 use aetherless_benchmark::{
     harness::BenchmarkHarness, BenchmarkCategory, BenchmarkReport, BenchmarkResult, JsonReporter,
 };
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -18,7 +18,7 @@ use std::time::Duration;
 /// Benchmark CPU affinity pinning overhead.
 fn bench_cpu_affinity_overhead(c: &mut Criterion) {
     let mut group = c.benchmark_group("smp_affinity");
-    
+
     // Benchmark spawning without affinity
     group.bench_function("spawn_no_affinity", |b| {
         b.iter(|| {
@@ -30,7 +30,7 @@ fn bench_cpu_affinity_overhead(c: &mut Criterion) {
             let _ = child.wait_with_output();
         });
     });
-    
+
     // Benchmark spawning with taskset (simulates affinity pinning)
     group.bench_function("spawn_with_taskset", |b| {
         b.iter(|| {
@@ -45,7 +45,7 @@ fn bench_cpu_affinity_overhead(c: &mut Criterion) {
             let _ = child.wait_with_output();
         });
     });
-    
+
     group.finish();
 }
 
@@ -54,9 +54,9 @@ fn bench_parallel_spawn(c: &mut Criterion) {
     let mut group = c.benchmark_group("smp_parallel_spawn");
     group.sample_size(10);
     group.measurement_time(Duration::from_secs(20));
-    
+
     let num_cpus = num_cpus::get();
-    
+
     for num_procs in [1, 2, 4, 8].iter().filter(|&&n| n <= num_cpus) {
         group.bench_with_input(
             BenchmarkId::new("parallel_procs", num_procs),
@@ -80,7 +80,7 @@ fn bench_parallel_spawn(c: &mut Criterion) {
                             })
                         })
                         .collect();
-                    
+
                     for h in handles {
                         h.join().unwrap();
                     }
@@ -88,7 +88,7 @@ fn bench_parallel_spawn(c: &mut Criterion) {
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -97,16 +97,16 @@ fn bench_distribution_evenness(c: &mut Criterion) {
     c.bench_function("smp_distribution_test", |b| {
         let num_cpus = num_cpus::get();
         let counter = Arc::new(AtomicUsize::new(0));
-        
+
         b.iter(|| {
             let mut assignments: Vec<usize> = vec![0; num_cpus];
-            
+
             // Simulate 100 allocations
             for _ in 0..100 {
                 let cpu = counter.fetch_add(1, Ordering::Relaxed) % num_cpus;
                 assignments[cpu] += 1;
             }
-            
+
             // All should be evenly distributed (10 each for 10 CPUs, etc.)
             let expected = 100 / num_cpus;
             for count in &assignments {
@@ -124,7 +124,7 @@ fn bench_distribution_evenness(c: &mut Criterion) {
 fn generate_smp_report() {
     let mut report = BenchmarkReport::new();
     let harness = BenchmarkHarness::new().warmup(3).iterations(20);
-    
+
     // Affinity overhead
     let samples = harness.run(|| {
         let child = Command::new("taskset")
@@ -137,7 +137,7 @@ fn generate_smp_report() {
             .expect("spawn");
         let _ = child.wait_with_output();
     });
-    
+
     report.add_result(
         BenchmarkResult::latency(
             "smp_affinity_overhead",
@@ -148,7 +148,7 @@ fn generate_smp_report() {
         .with_metadata("operation", "taskset_pin")
         .with_metadata("cpu", "0"),
     );
-    
+
     // Save report
     if let Ok(reporter) = JsonReporter::default_location() {
         if let Ok(path) = reporter.save(&report) {
