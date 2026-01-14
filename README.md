@@ -36,16 +36,98 @@
 
 ## Quickstart
 
-### Docker (recommended)
+### Prerequisites
 
 ```bash
-docker build -t aetherless-bench -f bench/Dockerfile .
-docker run --rm -v $(pwd)/bench/results:/out aetherless-bench
+# Rust toolchain (1.70+)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Optional: CRIU for warm pools
+sudo apt install criu
 ```
 
-### Native (Ubuntu 22.04)
+### Build and Install
 
 ```bash
+# Clone the repository
+git clone https://github.com/ankitkpandey1/aetherless.git
+cd aetherless
+
+# Build the project
+cargo build --release
+
+# Install the CLI
+cargo install --path aetherless-cli
+
+# Verify installation
+aether --version
+```
+
+### Run Your First Function
+
+**Step 1: Create a handler**
+
+```python
+#!/usr/bin/env python3
+# /opt/handlers/hello.py
+import os, socket, json
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        response = {'message': 'Hello from Aetherless!', 'path': self.path}
+        self.wfile.write(json.dumps(response).encode())
+    
+    def log_message(self, format, *args):
+        pass  # Suppress logs
+
+# Connect to orchestrator and signal ready
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.connect(os.environ['AETHER_SOCKET'])
+sock.send(b'READY')
+
+# Start serving
+port = int(os.environ.get('AETHER_TRIGGER_PORT', 8080))
+HTTPServer(('0.0.0.0', port), Handler).serve_forever()
+```
+
+**Step 2: Create configuration**
+
+```yaml
+# hello.yaml
+functions:
+  - id: hello-api
+    memory_limit_mb: 128
+    trigger_port: 8080
+    handler_path: /opt/handlers/hello.py
+    timeout_ms: 30000
+```
+
+**Step 3: Start the orchestrator**
+
+```bash
+chmod +x /opt/handlers/hello.py
+aether -c hello.yaml up --foreground
+```
+
+**Step 4: Test it**
+
+```bash
+curl http://localhost:8080/test
+# {"message": "Hello from Aetherless!", "path": "/test"}
+```
+
+### Run Benchmarks
+
+```bash
+# Docker (recommended)
+docker build -t aetherless-bench -f bench/Dockerfile .
+docker run --rm -v $(pwd)/bench/results:/out aetherless-bench
+
+# Native (Ubuntu 22.04)
 ./bench/setup_env.sh && ./bench/compare.sh --smoke --output-dir bench/results
 ```
 
@@ -152,97 +234,9 @@ ML inference, image processing, data transformation—any pipeline where you cha
 | **Language Agnostic** | Python, Node, Rust, Go—any process with a TCP port |
 | **Single Binary** | One Rust binary, no container runtime required |
 
----
-
-## Installation
-
-### Quick Install
-
-```bash
-# Clone and build
-git clone https://github.com/ankitkpandey1/aetherless.git
-cd aetherless
-cargo build --release
-
-# Install CLI
-cargo install --path aetherless-cli
-
-# Verify
-aether --version
-```
-
-### Prerequisites
-
-```bash
-# Rust toolchain (1.70+)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Optional: CRIU for warm pools
-sudo apt install criu
-```
 
 ---
 
-## Quick Start
-
-Deploy a Python HTTP function in under 2 minutes.
-
-### Step 1: Create Your Handler
-
-```python
-#!/usr/bin/env python3
-# /opt/handlers/hello.py
-import os, socket, json
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-        response = {'message': 'Hello from Aetherless!', 'path': self.path}
-        self.wfile.write(json.dumps(response).encode())
-    
-    def log_message(self, format, *args):
-        pass  # Suppress logs
-
-# Connect to orchestrator and signal ready
-sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-sock.connect(os.environ['AETHER_SOCKET'])
-sock.send(b'READY')
-
-# Start serving
-port = int(os.environ.get('AETHER_TRIGGER_PORT', 8080))
-HTTPServer(('0.0.0.0', port), Handler).serve_forever()
-```
-
-### Step 2: Create Configuration
-
-```yaml
-# hello.yaml
-functions:
-  - id: hello-api
-    memory_limit_mb: 128
-    trigger_port: 8080
-    handler_path: /opt/handlers/hello.py
-    timeout_ms: 30000
-```
-
-### Step 3: Start the Orchestrator
-
-```bash
-chmod +x /opt/handlers/hello.py
-aether -c hello.yaml up --foreground
-```
-
-### Step 4: Test
-
-```bash
-curl http://localhost:8080/test
-# {"message": "Hello from Aetherless!", "path": "/test"}
-```
-
----
 
 ## Architecture
 
