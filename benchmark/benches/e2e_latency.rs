@@ -6,9 +6,7 @@
 //! Measures the full request lifecycle from client request to response,
 //! including handler orchestration overhead.
 
-use aetherless_benchmark::{
-    BenchmarkReport, JsonReporter,
-};
+use aetherless_benchmark::{BenchmarkReport, JsonReporter};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
